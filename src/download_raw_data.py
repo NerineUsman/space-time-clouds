@@ -43,24 +43,24 @@ if __name__ == "__main__":
     start_time = datetime.strptime(input['start_time'], '%H:%M').strftime('%H%M%S')
     end_time = datetime.strptime(input['end_time'], '%H:%M').strftime('%H%M%S')    
 
-    for single_date in daterange(start_date, end_date):
-        print(single_date.strftime('%Y-%m-%d'))
-        DateTimeIni = single_date.strftime("%Y%m%d") + "-" + start_time
-        DateTimeFin = single_date.strftime("%Y%m%d") + "-" + end_time
+    # for single_date in daterange(start_date, end_date):
+        # print(single_date.strftime('%Y-%m-%d'))
+        # DateTimeIni = single_date.strftime("%Y%m%d") + "-" + start_time
+        # DateTimeFin = single_date.strftime("%Y%m%d") + "-" + end_time
         
-        # download the data
-        # Cloud top height
-        GOES.download('goes16', 'ABI-L2-ACHAF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
-                              DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
-                              path_out= loc_data + 'cth/', show_download_progress=False)
-        # Cloud optical depth
-        GOES.download('goes16', 'ABI-L2-CODF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
-                              DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
-                              path_out= loc_data + 'cod/', show_download_progress=False)
-        # Derived Motions
-        GOES.download('goes16', 'ABI-L2-DMWF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
-                              DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
-                              path_out= loc_data + 'dm/', show_download_progress=False)
+        # # download the data
+        # # Cloud top height
+        # GOES.download('goes16', 'ABI-L2-ACHAF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
+        #                       DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
+        #                       path_out= loc_data + 'cth/', show_download_progress=False)
+        # # Cloud optical depth
+        # GOES.download('goes16', 'ABI-L2-CODF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
+        #                       DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
+        #                       path_out= loc_data + 'cod/', show_download_progress=False)
+        # # Derived Motions
+        # GOES.download('goes16', 'ABI-L2-DMWF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
+        #                       DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
+        #                       path_out= loc_data + 'dm/', show_download_progress=False)
     
     ## create dictionairy with all available dates
     dates = {}
@@ -68,23 +68,25 @@ if __name__ == "__main__":
     path = loc_data + 'cth/'
     files = [path + f for f in os.listdir(path) if (os.path.isfile(os.path.join(path, f)) and 'ACHAF' in f)]
     acq_dates = acquisitionDates(files)
-    dates['cth'] = acq_dates
+    dates['cth'] = pd.DataFrame({'file_name': files, 'date': acq_dates } )
     
     path = loc_data + 'cod/'
     files = [path + f for f in os.listdir(path) if (os.path.isfile(os.path.join(path, f)) and 'CODF' in f)]
     acq_dates = acquisitionDates(files)
-    dates['cod'] = acq_dates
+    dates['cod'] =  pd.DataFrame({'file_name': files, 'date': acq_dates } )
     
     path = loc_data + 'dm/'
     files = [path + f for f in os.listdir(path) if (os.path.isfile(os.path.join(path, f)) and 'DMWF' in f)]
     acq_dates = []
+    band_id = []
     
     for idx, file in enumerate(files):
         ds = xr.open_dataset(file)
         t = datetime.strptime(ds.time_coverage_start, '%Y-%m-%dT%H:%M:%S.%fZ')
         t = np.datetime64(t)
+        band_id.append(ds.band_id.values[0])
         acq_dates.append(t)
-    dates['dm'] = np.array(acq_dates)
+    dates['dm'] =  pd.DataFrame({'file_name': files, 'date': acq_dates , 'band_id': band_id} )
 
     with open(loc_data + 'dates.txt', 'wb') as outfile:
         pickle.dump(dates, outfile)
