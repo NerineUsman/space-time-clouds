@@ -10,18 +10,26 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 import GOES as GOES
+import os
+from scipy.io import loadmat
 
 
 # In[2]:
 
+def coastLine(lon):
+    p1 = [-50 ,2.5]
+    p2 = [-30, -5]
+    a = (p2[1] - p1[1])/(p2[0] -p1[0]) 
+    b = p1[1] - a * p1[0] 
+    return a * lon + b
 
 def classifyISCCP(cod, cth, dqf_cod, bound = [3.6, 23, 2e3, 8e3]):
     """
     Function to classify pixels based on cod and cth. 
     cod, cth, dqf_cod should all be of the same shape. 
     input: cod : (mxn) - array.  cloud optical depth
-           cth : (mxn) - array.  cloud top height
-           dqf_cod: (mxn) - array. data quality flags for cod data. 6 for clear sky, 0 for good quality. 
+            cth : (mxn) - array.  cloud top height
+            dqf_cod: (mxn) - array. data quality flags for cod data. 6 for clear sky, 0 for good quality. 
     
     bound = [lower split value cod, upper split value cod, 
                 lower split value cth, upper split value cth ]
@@ -42,35 +50,29 @@ def classifyISCCP(cod, cth, dqf_cod, bound = [3.6, 23, 2e3, 8e3]):
     b_cth = bound[2:]
     ct = np.where(dqf_cod == 6, 1, # clear sky # should we also use dqf_cth = 4 here?
               np.where(dqf_cod != 0, 0, # non valid data
-                       np.where(cod < b_cod[0] , 
+                        np.where(cod < b_cod[0] , 
                                 np.where(cth<b_cth[0], 2,
                                         np.where(cth< b_cth[1], 3, 4)),
-                       np.where(cod< b_cod[1] , 
+                        np.where(cod< b_cod[1] , 
                                 np.where(cth<b_cth[0], 5,
                                         np.where(cth< b_cth[1], 6, 7)
                                         ), 
                                 np.where(cth<b_cth[0], 8,
                                         np.where(cth< b_cth[1], 9, 10)
                                         )
-                               )
-                               )
+                                )
+                                )
                       )
-             )
+              )
     return ct
 
-def histClassifications(ct, ax = None):
-    if ax is None:
-        ax = plt.gca()
-    bins = np.linspace(0.5, 10.5, 11)
-    return ax.hist(ct.flatten(), bins = bins, density = True)
-
-def makeXArrayFromNetCDFs(file_cod, file_cth,
+def combineCOD_CTH(file_cod, file_cth,
                           domain = [-50.0,-30.0,-5.0,15.0] # [left, right, bottom, top]
                          ):
     """
     function which makes from the two seperate files for cod and cth one xarray which containts cod, cth and the cloud classification
-    input: file_cod    NETCDF from NOAA which contains the COD data
-           file_cth    NETCDF from NOAA which contanis the CTH data
+    input: file_cod    path to NETCDF from NOAA which contains the COD data
+           file_cth    path to NETCDF from NOAA which contanis the CTH data
            [domain]    array (4,) which contains the extent of the area of interest
                                 [left, right, bottom, top]
     output: xarray     xarray : variables - cth, cod, ct (cloud types)
@@ -138,6 +140,13 @@ def makeXArrayFromNetCDFs(file_cod, file_cth,
 def plotImage(image):
     domain = image.extent
     fig, ax = plt.subplots(1,3, figsize = (15, 4), sharex = True, sharey = True)
+    
+    ## base map with coast lines
+    if os.path.exists("../lib/coast.mat"):
+        coast = loadmat("../lib/coast.mat")
+        for axi in ax:
+            axi.plot(coast["long"], coast["lat"], color='r', linewidth=1)
+    
     fig_cod = ax[0].pcolormesh(image.lon.data, image.lat.data, image.cod)
     ax[0].set_xlim([domain[0], domain[1]])
     ax[0].set_ylim([ domain[2], domain[3]])
@@ -151,26 +160,6 @@ def plotImage(image):
     fig_ct = ax[2].pcolormesh(image.lon.data, image.lat.data, image.ct)
     ax[2].set_title('Classification')
     fig.colorbar(fig_ct, ax =ax[2])
-    return fig
+    return fig, ax
 
-def saveImage(image, output_loc = 'output'):
-    date = image.time.data
-    ts = pd.to_datetime(str(date)) 
-    d = ts.strftime('%Y%m%d-%Hh%M%S') # maybe change day/month to julian days
-    image.drop(['lon', 'lat']).to_netcdf(f'{output_loc}/image_{d}.nc')
-    return
-   
-
-def rawDatatoClassification(flist_cth, flist_cod, **kwargs):
-    for i in range(len(flist_cth)):
-        file_cth = flist_cth[i]
-        file_cod = flist_cod[i]
-        image = makeXArrayFromNetCDFs(file_cod, file_cth)
-        ct = classifyISCCP(image.cod, image.cth, image.dqf_cod)
-        image = image.assign(ct = (["x", "y"], ct))
-    #     print(image.time.data)
-    #     plotImage(image)
-    #     plt.show()
-        saveImage(image, **kwargs)
-    return image
 

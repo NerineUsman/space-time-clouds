@@ -8,12 +8,14 @@ Created on Thu Nov  4 11:35:33 2021
 """
 
 # import modules
-import GOES as GOES
 import sys, os
 import pickle
+import GOES as GOES
 import xarray as xr
 import numpy as np
+import pandas as pd
 from datetime import datetime, timedelta
+
 
 # variables
 input_file = 'input_download.txt'
@@ -43,24 +45,24 @@ if __name__ == "__main__":
     start_time = datetime.strptime(input['start_time'], '%H:%M').strftime('%H%M%S')
     end_time = datetime.strptime(input['end_time'], '%H:%M').strftime('%H%M%S')    
 
-    # for single_date in daterange(start_date, end_date):
-        # print(single_date.strftime('%Y-%m-%d'))
-        # DateTimeIni = single_date.strftime("%Y%m%d") + "-" + start_time
-        # DateTimeFin = single_date.strftime("%Y%m%d") + "-" + end_time
+    for single_date in daterange(start_date, end_date):
+        print(single_date.strftime('%Y-%m-%d'))
+        DateTimeIni = single_date.strftime("%Y%m%d") + "-" + start_time
+        DateTimeFin = single_date.strftime("%Y%m%d") + "-" + end_time
         
-        # # download the data
-        # # Cloud top height
-        # GOES.download('goes16', 'ABI-L2-ACHAF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
-        #                       DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
-        #                       path_out= loc_data + 'cth/', show_download_progress=False)
-        # # Cloud optical depth
-        # GOES.download('goes16', 'ABI-L2-CODF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
-        #                       DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
-        #                       path_out= loc_data + 'cod/', show_download_progress=False)
-        # # Derived Motions
-        # GOES.download('goes16', 'ABI-L2-DMWF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
-        #                       DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
-        #                       path_out= loc_data + 'dm/', show_download_progress=False)
+        # download the data
+        # Cloud top height
+        GOES.download('goes16', 'ABI-L2-ACHAF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
+                              DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
+                              path_out= loc_data + 'cth/', show_download_progress=False)
+        # Cloud optical depth
+        GOES.download('goes16', 'ABI-L2-CODF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
+                              DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
+                              path_out= loc_data + 'cod/', show_download_progress=False)
+        # Derived Motions
+        GOES.download('goes16', 'ABI-L2-DMWF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
+                              DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
+                              path_out= loc_data + 'dm/', show_download_progress=False)
     
     ## create dictionairy with all available dates
     dates = {}

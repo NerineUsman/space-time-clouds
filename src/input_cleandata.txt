@@ -1,0 +1,2 @@
+loc_data          ../data/raw_data/
+loc_clean_data  ../data/clean_data/
