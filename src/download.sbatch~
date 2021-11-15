@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH --job-name=hello-python
+#SBATCH --output=./output/hello-python-%j.out
+#SBATCH --error=./output/hello-python-%j.err
+#SBATCH --nodes=1
+#SBATCH --partition=small
+#SBATCH --tasks-per-node=1
+
+# Load Python 3.8.3
+module load Python/3.8.3
+
+# Run Python script
+srun ./download_raw_data.py
