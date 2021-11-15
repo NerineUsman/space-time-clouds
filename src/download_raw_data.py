@@ -16,6 +16,9 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 
+sys.path.insert(0, '../lib')
+import data_clean as dc
+
 
 # variables
 input_file = 'input_download.txt'
@@ -24,13 +27,6 @@ input_file = 'input_download.txt'
 def daterange(start_date, end_date):
     for n in range(int((end_date - start_date).days)):
         yield start_date + timedelta(n)
-
-def acquisitionDates(flist):
-    acq_dates = []
-    for idx, file in enumerate(flist):
-        ds = xr.open_dataset(file)
-        acq_dates.append(ds.t.values)
-    return np.array(acq_dates)
 
 # main #
 if __name__ == "__main__":
@@ -52,14 +48,17 @@ if __name__ == "__main__":
         
         # download the data
         # Cloud top height
+        print('download cth', end = '\r')
         GOES.download('goes16', 'ABI-L2-ACHAF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
                               DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
-                              path_out= loc_data + 'cth/', show_download_progress=False)
+                              path_out= loc_data + 'cth/', show_download_progress=True)
         # Cloud optical depth
+        print('download cod', end = '\r')
         GOES.download('goes16', 'ABI-L2-CODF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
                               DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
                               path_out= loc_data + 'cod/', show_download_progress=False)
         # Derived Motions
+        print('download dm', end = '\r')
         GOES.download('goes16', 'ABI-L2-DMWF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
                               DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
                               path_out= loc_data + 'dm/', show_download_progress=False)
@@ -69,12 +68,12 @@ if __name__ == "__main__":
     
     path = loc_data + 'cth/'
     files = [path + f for f in os.listdir(path) if (os.path.isfile(os.path.join(path, f)) and 'ACHAF' in f)]
-    acq_dates = acquisitionDates(files)
+    acq_dates = dc.acquisitionDates(files)
     dates['cth'] = pd.DataFrame({'file_name': files, 'date': acq_dates } )
     
     path = loc_data + 'cod/'
     files = [path + f for f in os.listdir(path) if (os.path.isfile(os.path.join(path, f)) and 'CODF' in f)]
-    acq_dates = acquisitionDates(files)
+    acq_dates = dc.acquisitionDates(files)
     dates['cod'] =  pd.DataFrame({'file_name': files, 'date': acq_dates } )
     
     path = loc_data + 'dm/'

@@ -8,12 +8,13 @@ Created on Mon Nov  8 15:46:40 2021
 """
 
 #import modules
-import sys
+import sys, os
 import pickle
 import numpy as np
 import scipy as sc
 import xarray as xr
 import pandas as pd
+from datetime import datetime
 
 sys.path.insert(0, '../lib')
 import data_clean as dc
@@ -26,6 +27,18 @@ scale_lon = 40075e3 * np.cos( centerpoint[0] * np.pi/ 180 ) / 360 #m
 
    
 # functions
+def datetime64_to_time_of_day(datetime64_array):
+    """
+    Return a new array. For every element in datetime64_array return the time of day (since midnight).
+    >>> datetime64_to_time_of_day(np.array(['2012-01-02T01:01:01.001Z'],dtype='datetime64[ms]'))
+    array([3661001], dtype='timedelta64[ms]')
+    >>> datetime64_to_time_of_day(np.datetime64('2012-01-02T01:01:01.001Z','[ms]'))
+    numpy.timedelta64(3661001,'ms')
+    """
+    day = datetime64_array.astype('datetime64[D]').astype(datetime64_array.dtype)
+    time_of_day = datetime64_array - day
+    return time_of_day
+
 def latlon_to_meters(lat, lon, 
                      centerpoint = centerpoint
                     ):
@@ -38,7 +51,7 @@ def meters_to_latlon(x, y,
     return (y / scale_lat) + centerpoint[0], (x / scale_lon) + centerpoint[1]
 
 def saveDs(ds, output_loc):
-    date = ds.time.data
+    date = ds.t.data
     ts = pd.to_datetime(str(date)) 
     d = ts.strftime('%Y%m%d-%Hh%M%S') # maybe change day/month to julian days
     file_name = f'{output_loc}/image_{d}.nc'
@@ -57,8 +70,32 @@ if __name__ == "__main__":
     with open(loc_data + 'dates.txt', "rb") as f:
         dates = pickle.load(f)
     
+# =============================================================================
+#     determine for which dates we need to do the cleaning
+# =============================================================================
     
+    # skip files which are not in the correct time range
+    start_date = datetime.strptime(input['start_date'], '%d-%m-%Y')
+    end_date = datetime.strptime(input['end_date'], '%d-%m-%Y')
+    start_time = pd.to_timedelta(input['start_time'] + ':00')
+    end_time = pd.to_timedelta(input['end_time'] + ':00')
     
+    date = dates['cth'].date 
+    # check whether t  is within start and end date and time
+    time = datetime64_to_time_of_day(date) 
+    idx = (start_date < date)  & (date < end_date) & (start_time < time)  & (time < end_time)
+    dates['cth'] = dates['cth'][idx]
+    
+    # skip files which are already cleaned
+    with open(loc_clean_data + 'clean_dates.txt', 'rb') as f:
+        clean_dates = pickle.load(f)
+    
+
+    idx = [idx for idx, date in dates['cth'].iterrows() if ~(date.date == clean_dates.date).any()]
+    dates['cth'] = dates['cth'].loc[idx]
+
+    print(dates['cth'].date)    
+
     for idx_cth, date in dates['cth'].iterrows(): # loop over all available files for cth
         t = dates['cth'].loc[idx_cth].date
         
@@ -138,12 +175,19 @@ if __name__ == "__main__":
                 coords=dict(
                     x = (["x"], grid_x[:, 0]),
                     y = (["y"], grid_y[0, :]),
-                    time=da_m.time.data,
+                    t = da_m.time.data,
                 ),
                 attrs = dict(extent = da_m.extent)
             )
         
+        d.cth.attrs["units"] = "m"
+        d.x.attrs["units"] = "m"
+        d.y.attrs["units"] = "m"
         
+        invalid =np.sum(d.ct == 0)
+        if invalid > 10000:
+            continue
+
 # =============================================================================
 #         Advection
 # =============================================================================
@@ -187,7 +231,9 @@ if __name__ == "__main__":
         
         d = d.assign({"u" : (("x", "y"), np.real(wind)),
                       "v" : (("x", "y"), np.imag(wind))}) 
-
+        
+        d.u.attrs["units"] = "m s-1"
+        d.v.attrs["units"] = "m s-1"
         
         # delete values above land
         lat, lon = meters_to_latlon(d.x, d.y)
@@ -197,3 +243,16 @@ if __name__ == "__main__":
 #         save new dataset
 # =============================================================================
         file_name = saveDs(d, loc_clean_data)
+        
+
+# =============================================================================
+#     Update file with cleaned dates
+# =============================================================================
+
+    path = loc_clean_data
+    files = [path + f for f in os.listdir(path) if (os.path.isfile(os.path.join(path, f)) and 'image' in f)]
+    acq_dates = dc.acquisitionDates(files)
+    dates = pd.DataFrame({'file_name': files, 'date': acq_dates } )
+    
+    with open(loc_clean_data + 'clean_dates.txt', 'wb') as outfile:
+        pickle.dump(dates, outfile)

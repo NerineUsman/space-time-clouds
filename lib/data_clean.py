@@ -1,20 +1,29 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 
-# In[3]:
+"""
+Created on Mon Nov  8 15:46:40 2021
+
+@author: Nerine
+"""
 
 
+# import modules
 import matplotlib.pyplot as plt
-import netCDF4 as nc
 import xarray as xr
-import pandas as pd
 import numpy as np
 import GOES as GOES
 import os
 from scipy.io import loadmat
 
 
-# In[2]:
+# functions
+def acquisitionDates(flist):
+    acq_dates = []
+    for idx, file in enumerate(flist):
+        ds = xr.open_dataset(file)
+        acq_dates.append(ds.t.values)
+    return np.array(acq_dates)
 
 def coastLine(lon):
     p1 = [-50 ,2.5]
