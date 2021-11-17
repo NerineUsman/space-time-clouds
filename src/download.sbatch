@@ -1,13 +1,18 @@
 #!/bin/bash
 #SBATCH --job-name=download-GOES
-#SBATCH --output=./output/download-%j.out
-#SBATCH --error=./output/download-%j.err
+#SBATCH --output=./output-sbatch/download-%j.out
+#SBATCH --error=./output-sbatch/download-%j.err
 #SBATCH --nodes=1
 #SBATCH --partition=small
 #SBATCH --tasks-per-node=1
+
+# Git log-in
+git config --list
+git config credential.helper store
+git push
 
 # Load Python 3.8.3
 module load Python/3.8.3
 
 # Run Python script
-srun ./download_raw_data.py
+srun ./src/download_raw_data.py

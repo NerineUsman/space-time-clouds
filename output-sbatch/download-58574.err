@@ -1,0 +1,2 @@
+slurmstepd: error: execve(): /home/nerine/space-time-clouds/./download_raw_data.py: No such file or directory
+srun: error: cirrus-2: task 0: Exited with exit code 2
