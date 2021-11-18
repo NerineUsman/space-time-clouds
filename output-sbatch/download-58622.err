@@ -1,0 +1,3 @@
+Everything up-to-date
+slurmstepd: error: execve(): /home/nerine/space-time-clouds/./src/download_raw_data.py: Permission denied
+srun: error: cirrus-2: task 0: Exited with exit code 13

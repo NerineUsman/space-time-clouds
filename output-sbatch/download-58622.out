@@ -1,0 +1,12 @@
+push.default=simple
+user.name=NerineUsman
+user.email=nerine@usman.nl
+credential.https://github.com.username=NerineUsman
+core.repositoryformatversion=0
+core.filemode=true
+core.bare=false
+core.logallrefupdates=true
+remote.origin.url=https://NerineUsman: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@github.com/NerineUsman/space-time-clouds.git
+remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+branch.main.remote=origin
+branch.main.merge=refs/heads/main
