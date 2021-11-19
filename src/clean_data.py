@@ -22,8 +22,8 @@ sys.path.insert(0, '../lib')
 import data_clean as dc
 
 # variables
-# input_file = 'input_cleandata.txt'
-input_file = './space-time-clouds/src/input_cleandata.txt'
+input_file = 'input_cleandata_local.txt'
+# input_file = './space-time-clouds/src/input_cleandata.txt'
 centerpoint = [5, -40] # deg lat, deg lon
 scale_lat = 111.32e3 #m
 scale_lon = 40075e3 * np.cos( centerpoint[0] * np.pi/ 180 ) / 360 #m
@@ -62,6 +62,13 @@ def saveDs(ds, output_loc):
     ds.to_netcdf(file_name)
     return file_name
      
+def makeCleanDatesFile(path):
+    files = [path + f for f in os.listdir(path) if (os.path.isfile(os.path.join(path, f)) and 'image' in f)]
+    acq_dates = dc.acquisitionDates(files)
+    dates = pd.DataFrame({'file_name': files, 'date': acq_dates } )
+    
+    with open(path + 'clean_dates.pickle', 'wb') as outfile:
+        pickle.dump(dates, outfile)
 
 # main #
 if __name__ == "__main__":
@@ -90,8 +97,11 @@ if __name__ == "__main__":
     idx = (start_date < date)  & (date < end_date) & (start_time < time)  & (time < end_time)
     dates['cth'] = dates['cth'][idx]
     
+    
+    makeCleanDatesFile(loc_clean_data)
+
     # skip files which are already cleaned
-    with open(loc_clean_data + 'clean_dates.txt', 'rb') as f:
+    with open(loc_clean_data + 'clean_dates.pickle', 'rb') as f:
         clean_dates = pickle.load(f)
     
 
@@ -271,9 +281,5 @@ if __name__ == "__main__":
 # =============================================================================
 
     path = loc_clean_data
-    files = [path + f for f in os.listdir(path) if (os.path.isfile(os.path.join(path, f)) and 'image' in f)]
-    acq_dates = dc.acquisitionDates(files)
-    dates = pd.DataFrame({'file_name': files, 'date': acq_dates } )
-    
-    with open(loc_clean_data + 'clean_dates.txt', 'wb') as outfile:
-        pickle.dump(dates, outfile)
+    makeCleanDatesFile(path)
+
