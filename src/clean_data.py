@@ -15,15 +15,19 @@ import scipy as sc
 import xarray as xr
 import pandas as pd
 from datetime import datetime
+import time as tm
 
+sys.path.insert(0, './space-time-clouds/lib')
 sys.path.insert(0, '../lib')
 import data_clean as dc
 
 # variables
-input_file = 'input_cleandata.txt'
+# input_file = 'input_cleandata.txt'
+input_file = './space-time-clouds/src/input_cleandata.txt'
 centerpoint = [5, -40] # deg lat, deg lon
 scale_lat = 111.32e3 #m
 scale_lon = 40075e3 * np.cos( centerpoint[0] * np.pi/ 180 ) / 360 #m
+print_process_time = False
 
    
 # functions
@@ -95,15 +99,25 @@ if __name__ == "__main__":
     dates['cth'] = dates['cth'].loc[idx]
 
     print(dates['cth'].date)    
+    
+    
 
     for idx_cth, date in dates['cth'].iterrows(): # loop over all available files for cth
+        
+        # time the loop for each file
+        if print_process_time:
+            start_time = tm.time()
+# =============================================================================
+#       Find the corresponding files from cod and dm    
+# =============================================================================
+
         t = dates['cth'].loc[idx_cth].date
         
         # cod
         dt = abs(dates['cod'].date - t)
         idx_cod = dt.argmin()
         if dt.loc[idx_cod] > np.timedelta64(10, 'm'):
-            # print(f'!Error: No cod found within 10 minutes of {t}')
+            print(f'!Error: No cod found within 10 minutes of {t}')
             continue
             # TODO: download the right file or skip
         
@@ -111,7 +125,7 @@ if __name__ == "__main__":
         dt = abs(dates['dm'].date - t)
         idx_dm = dt.nsmallest(6).index
         if dt.loc[idx_dm[0]] > np.timedelta64(1, 'h'):
-            # print(f'!Error: No cod found within 1 hour of {t}')
+            print(f'!Error: No cod found within 1 hour of {t}')
             continue
         
         print(t)
@@ -186,6 +200,10 @@ if __name__ == "__main__":
         
         invalid =np.sum(d.ct == 0)
         if invalid > 10000:
+            if print_process_time:
+                end_time = tm.time()
+                elapsed_time = end_time - start_time 
+                print(f'File with timestamp: ({t}) processed in {elapsed_time} s')
             continue
 
 # =============================================================================
@@ -244,7 +262,10 @@ if __name__ == "__main__":
 # =============================================================================
         file_name = saveDs(d, loc_clean_data)
         
-
+        if print_process_time:
+            end_time = tm.time()
+            elapsed_time = end_time - start_time 
+            print(f'File with timestamp: ({t}) processed in {elapsed_time} s')
 # =============================================================================
 #     Update file with cleaned dates
 # =============================================================================

@@ -17,11 +17,13 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 sys.path.insert(0, './space-time-clouds/lib')
+sys.path.insert(0, './lib')
 import data_clean as dc
 
 
 # variables
 input_file = './space-time-clouds/src/input_download.txt'
+
 
 # functions
 def daterange(start_date, end_date):
@@ -51,7 +53,7 @@ if __name__ == "__main__":
         print('download cth', end = '\r')
         GOES.download('goes16', 'ABI-L2-ACHAF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
                               DateTimeIni = DateTimeIni, DateTimeFin = DateTimeFin, 
-                              path_out= loc_data + 'cth/', show_download_progress=True)
+                              path_out= loc_data + 'cth/', show_download_progress=False)
         # Cloud optical depth
         print('download cod', end = '\r')
         GOES.download('goes16', 'ABI-L2-CODF', # see https://www.noaa.gov/organization/information-technology/list-of-big-data-program-datasets for product names
