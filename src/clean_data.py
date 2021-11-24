@@ -92,11 +92,13 @@ if __name__ == "__main__":
     end_time = pd.to_timedelta(input['end_time'] + ':00')
     
     date = dates['cth'].date 
+    
     # check whether t  is within start and end date and time
     time = datetime64_to_time_of_day(date) 
     idx = (start_date < date)  & (date < end_date) & (start_time < time)  & (time < end_time)
     dates['cth'] = dates['cth'][idx]
     
+    print(dates['cth'])
     
     makeCleanDatesFile(loc_clean_data)
 

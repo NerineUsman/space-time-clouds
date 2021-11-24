@@ -23,6 +23,7 @@ import data_clean as dc
 
 # variables
 input_file = './space-time-clouds/src/input_download.txt'
+input_file = 'input_download_local.txt'
 
 
 # functions
