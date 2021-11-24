@@ -235,9 +235,11 @@ if __name__ == "__main__":
         
                                     ]
             ds_small = ds[dict(nMeasures=nMeasures)]
+            if len(nMeasures) == 0:
+                continue
             dss.append(ds_small)
         
-        print('number of wind measurements', [len(ds.nMeasures) for ds in dss])
+        # print('number of wind measurements', [len(ds.nMeasures) for ds in dss])
         ds_wind = xr.concat(dss, 'nMeasures')
         
         # Determine coordinates in X-Y plane
