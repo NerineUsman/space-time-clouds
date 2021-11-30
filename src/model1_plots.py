@@ -19,15 +19,20 @@ import pandas as pd
 # input_file = 'input_model1_local.txt'
 input_file = './space-time-clouds/src/input_model1.txt'
 
+hlim = [0, 16] #km
+dlim = [-1.5, 5.1] #log (d)
+
 # functions
 def plot_distribution_next_cloud(df, title = None, nbins = 50, **kwargs):
     fig, ax = plt.subplots(1,3,figsize = (20, 4))
     # cth
     ax[0].hist(df.h_t_next * 1e-3, bins = nbins, **kwargs)
     ax[0].set_title('CTH (km)')
+    ax[0].set_xlim(hlim)
     # cod
     ax[1].hist(df.d_t_next, bins = nbins, **kwargs)
     ax[1].set_title('COD (log($\cdot$)')
+    ax[1].set_xlim(dlim)
     
     # joint density
     bins = [nbins, nbins]
@@ -36,13 +41,15 @@ def plot_distribution_next_cloud(df, title = None, nbins = 50, **kwargs):
                      **kwargs)
     ax[2].set_xlabel('COD (log($\cdot$)')
     ax[2].set_ylabel('CTH (km)')
+    ax[2].set_xlim(dlim)
+    ax[2].set_ylim(hlim)
     plt.colorbar(h[3], ax=ax[2])
 
     # ax[2].set_colorbar()
     
     if title != None:
         fig.suptitle(title)
-    return fig
+    return fig, ax
 
 
 
@@ -92,7 +99,7 @@ if __name__ == "__main__":
 
     # distribution for clouds after clear sky
     title = f'Clear sky to cloud distributions, n = {len(df_sc)}'
-    fig = plot_distribution_next_cloud(df_sc, title = title, density = True )
+    fig, ax = plot_distribution_next_cloud(df_sc, title = title, density = True )
     fig.savefig(loc_fig + 'clear_sky_to_cloud_distr.png')
 
     
@@ -139,8 +146,11 @@ if __name__ == "__main__":
                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
         
         title = f'Bin centre (h, d) = ({mu_h[i]*1e-3} km, {mu_d[i]}), n = {len(df_temp)}'
-        fig = plot_distribution_next_cloud(df_temp, title = title, density = True)
+        fig, ax = plot_distribution_next_cloud(df_temp, title = title, density = True)
+        ax[2].plot(mu_d[i], mu_h[i]*1e-3,'ro', label = 'bin center')
+        ax[2].legend()
         fig.savefig(f'{loc_fig}cloud_to_cloud_(h_d)_({mu_h[i]*1e-3}_{mu_d[i]}).png')
+        plt.show()
         i += 1
         
         
