@@ -91,7 +91,7 @@ if __name__ == "__main__":
 # =============================================================================
 
     # distribution for clouds after clear sky
-    title = 'Clear sky to cloud distributions'
+    title = f'Clear sky to cloud distributions, n = {len(df_sc)}'
     fig = plot_distribution_next_cloud(df_sc, title = title, density = True )
     fig.savefig(loc_fig + 'clear_sky_to_cloud_distr.png')
 
@@ -138,10 +138,10 @@ if __name__ == "__main__":
         df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
         
-        title = f'Bin centre (h, d) = ({mu_h[i]*1e-3} km, {mu_d[i]})'
+        title = f'Bin centre (h, d) = ({mu_h[i]*1e-3} km, {mu_d[i]}), n = {len(df_temp)}'
         fig = plot_distribution_next_cloud(df_temp, title = title, density = True)
         fig.savefig(f'{loc_fig}cloud_to_cloud_(h_d)_({mu_h[i]*1e-3}_{mu_d[i]}).png')
-        i +=1
+        i += 1
         
         
         
