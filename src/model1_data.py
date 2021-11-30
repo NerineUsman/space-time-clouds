@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 
 # variables
 input_file = './space-time-clouds/src/input_model1.txt'
+input_file = 'input_model1_local.txt'
 
 # functions
 def daterange(start_date, end_date):
@@ -100,7 +101,7 @@ if __name__ == "__main__":
         print(single_date, end = '\t')
         date = dates.date
         idx = (single_date < date)  & (date < single_date + timedelta(1)) 
-        dates_day = dates[idx]
+        dates_day = dates[idx].sort_values(by = ['date'])
         
         print(len(dates_day))
         
@@ -114,7 +115,7 @@ if __name__ == "__main__":
             dss.append(ds)
         
         ds = xr.concat(dss, 't')
-        
+        print(ds.t.data)
         # invalid =np.sum(ds.ct == 0, axis = (1,2))
         # ds = ds.where(invalid < 10000, dr/op = True)
 

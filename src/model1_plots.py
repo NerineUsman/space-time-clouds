@@ -46,10 +46,26 @@ if __name__ == "__main__":
         print(len(df))
         dfs.append(df)
     df = pd.concat(dfs)
-    df
-    
-    
-    
+
+
+# =============================================================================
+#   Cloud to cloud    
+# =============================================================================
+    df_cc = df.loc[(df.cloud == 'cloud') & (df.cloud_next == 'cloud') ]
+    df_cc.insert(len(df_cc.columns), 'dh', df_cc.apply(lambda row: row.h_t_next - row.h_t, axis = 1))
+    df_cc.insert(len(df_cc.columns), 'dd', df_cc.apply(lambda row: row.d_t_next - row.d_t, axis = 1))
+    df_cc.head()
+        
+# =============================================================================
+#   Clear sky to cloud
+# =============================================================================
+
+    df_sc = df.loc[(df.cloud == 'clear sky') & (df.cloud_next == 'cloud') ]
+
+# =============================================================================
+#   To clear sky
+# =============================================================================
+    df_s = df.loc[((df.cloud == 'clear sky') | (df.cloud == 'cloud')) & (df.cloud_next == 'clear sky')  ]
 
     
 
