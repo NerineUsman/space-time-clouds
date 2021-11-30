@@ -71,7 +71,9 @@ if __name__ == "__main__":
         print(len(df))
         dfs.append(df)
     df = pd.concat(dfs)
-
+# =============================================================================
+#   Clouds
+# =============================================================================
 
 # =============================================================================
 #   Cloud to cloud    
@@ -97,6 +99,12 @@ if __name__ == "__main__":
 #   plots
 # =============================================================================
 
+    # joint density
+    title = f'Cloud distributions, n = {len(df_cc) + len(df_sc)}'
+    fig, ax = plot_distribution_next_cloud(pd.concat([df_cc, df_sc]), title = title, density = True )
+    fig.savefig(loc_fig + 'cloud_distr.png')
+
+    
     # distribution for clouds after clear sky
     title = f'Clear sky to cloud distributions, n = {len(df_sc)}'
     fig, ax = plot_distribution_next_cloud(df_sc, title = title, density = True )
