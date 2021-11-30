@@ -9,7 +9,6 @@ Created on Mon Nov 29 11:05:38 2021
 
 # import modules
 import pickle
-import matplotlib.pyplot as plt
 import xarray as xr
 import numpy as np
 import pandas as pd
