@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 
 # variables
 input_file = './space-time-clouds/src/input_model1.txt'
-input_file = 'input_model1_local.txt'
+# input_file = 'input_model1_local.txt'
 
 # functions
 def daterange(start_date, end_date):
