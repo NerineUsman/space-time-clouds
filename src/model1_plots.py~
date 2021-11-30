@@ -16,8 +16,8 @@ import pandas as pd
 
 
 # variables
-# input_file = 'input_model1_local.txt'
-input_file = './space-time-clouds/src/input_model1.txt'
+input_file = 'input_model1_local.txt'
+# input_file = './space-time-clouds/src/input_model1.txt'
 
 # functions
 def plot_distribution_next_cloud(df, title = None, nbins = 50, **kwargs):
