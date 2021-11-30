@@ -1,5 +1,5 @@
-loc_data          ../data/raw_data/
 loc_clean_data  ../data/clean_data/
+loc_model1_data ../data/model1_data/
 start_date    10-12-2020
 end_date      15-12-2020
 start_time    00:00

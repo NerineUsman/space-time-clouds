@@ -18,8 +18,6 @@ from datetime import datetime, timedelta
 
 
 # variables
-loc_clean_data = '../data/clean_data/'
-# loc_clean_data = ''
 input_file = 'input_model1_local.txt'
 
 # functions
@@ -69,13 +67,16 @@ def saveModelData(df, output_loc, date):
 
 # main
 if __name__ == "__main__":
-    with open(loc_clean_data + 'clean_dates.pickle', 'rb') as f:
-        dates = pickle.load(f)
+
 
     with open(input_file) as f:
         input = dict([line.split() for line in f])
     
-    loc_data = input['loc_data']
+    loc_clean_data = input['loc_clean_data']
+    loc_model1_data = input['loc_model1_data']
+    
+    with open(loc_clean_data + 'clean_dates.pickle', 'rb') as f:
+        dates = pickle.load(f)
     
     dx = int(input['dx']) # pixels
     dy = int(input['dy']) # pixels
@@ -219,4 +220,4 @@ if __name__ == "__main__":
 #         Save model 1 data
 # =============================================================================
 
-        saveModelData(df, '../data/model1_data/', single_date)
+        saveModelData(df, loc_model1_data, single_date)
