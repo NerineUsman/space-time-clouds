@@ -166,7 +166,7 @@ if __name__ == "__main__":
                     break
                 xloc[k+1, p] = i[p]
                 yloc[k+1, p] = j[p]
-            print(f'\rpixel {p + 1:3.0f} of {n_p}     ', flush = True, end = '')
+            # print(f'\rpixel {p + 1:3.0f} of {n_p}     ', flush = True, end = '')
 
 
 # =============================================================================
