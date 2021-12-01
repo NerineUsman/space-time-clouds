@@ -16,7 +16,7 @@ import pandas as pd
 
 
 # variables
-# input_file = 'input_model1_local.txt'
+# input_file = 'input_model1_local.t/xt'
 input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
@@ -155,6 +155,10 @@ if __name__ == "__main__":
         
         title = f'Bin centre (h, d) = ({mu_h[i]*1e-3} km, {mu_d[i]}), n = {len(df_temp)}'
         fig, ax = plot_distribution_next_cloud(df_temp, title = title, density = True)
+        ax[0].axvline(mu_h[i]*1e-3, color = 'r', label = 'bin center')
+        ax[0].legend()
+        ax[1].axvline(mu_d[i], color = 'r', label = 'bin center')
+        ax[1].legend()
         ax[2].plot(mu_d[i], mu_h[i]*1e-3,'ro', label = 'bin center')
         ax[2].legend()
         fig.savefig(f'{loc_fig}cloud_to_cloud_(h_d)_({mu_h[i]*1e-3}_{mu_d[i]}).png')
