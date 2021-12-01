@@ -236,7 +236,7 @@ if __name__ == "__main__":
               ylabel = '$\hat{\sigma^2_d}$',
               title = 'Variance')
     fig.suptitle('Estimators of time distribution COD')
-    plt.savefig('')
+    fig.savefig(loc_fig + 'estimator_COD.png')
     
         
 
