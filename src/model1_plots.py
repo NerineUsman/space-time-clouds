@@ -136,8 +136,8 @@ if __name__ == "__main__":
     
     # cloud to cloud distribution from a few bins
     
-    mu_h = [1e3, 6e3, 12e3] #
-    mu_d = [0, 1]
+    mu_h = [1e3, 6e3, 9e3, 12e3] #
+    mu_d = [0, 1, 2, 3]
     mu_h, mu_d = np.meshgrid(mu_h, mu_d)
     mu_h, mu_d = [x.flatten() for x in [mu_h, mu_d]]
     
