@@ -193,8 +193,8 @@ if __name__ == "__main__":
     #     i += 1
         
     # cod estimators normal distribution
-    mu_h = np.arange(1e3, 13e3, 2e3) # m
-    mu_d = np.arange(0, 4, .2)
+    mu_h = np.arange(1e3, 14e3, 2e3) # m
+    mu_d = np.arange(0, 4, .1)
     n_h = len(mu_h)
     
     bins = state_bins(mu_h, mu_d)
