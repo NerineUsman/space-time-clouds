@@ -16,8 +16,8 @@ import pandas as pd
 
 
 # variables
-# input_file = 'input_model1_local.t/xt'
-input_file = './space-time-clouds/src/input_model1.txt'
+input_file = 'input_model1_local.txt'
+# input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
 dlim = [-1.5, 5.1] #log (d)
@@ -152,7 +152,8 @@ if __name__ == "__main__":
         # filter cloud to cloud on from within bin
         df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
-        
+        if len(df_temp) <= 1:
+            continue
         title = f'Bin centre (h, d) = ({mu_h[i]*1e-3} km, {mu_d[i]}), n = {len(df_temp)}'
         fig, ax = plot_distribution_next_cloud(df_temp, title = title, density = True)
         ax[0].axvline(mu_h[i]*1e-3, color = 'r', label = 'bin center')
