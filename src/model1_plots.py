@@ -206,22 +206,25 @@ if __name__ == "__main__":
         # filter cloud to cloud on from within bin
         df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])] 
-        n_clouds[i] = len(df_temp)
+        n = len(df_temp)
+        n_clouds[i] = n
 
-        if len(df_temp) <= 1:
+        if n <= 1:
             continue
         mu_hat[i] = df_temp.d_t_next.mean()
-        sigma_hat[i] = df_temp.d_t_next.var()
+        sigma_hat[i] = n / (n-1) * df_temp.d_t_next.var()
         i += 1
     
     mu_hat = mu_hat.reshape((len(mu_d), len(mu_h)))
     sigma_hat = sigma_hat.reshape((len(mu_d), len(mu_h)))
+    n_clouds = n_clouds.reshape((len(mu_d), len(mu_h)))
     
     h_labels = [f'cth = {h * 1e-3} km' for h in mu_h]
     
     color= cm.Blues(np.linspace(.2,1, len(mu_h)))
     
     fig, ax = plt.subplots(1, 2, figsize = (15, 5))
+    ax[0].plot(mu_d, mu_d, label = 'bin center', c = 'r')
     for i, c, label in zip(range(n_h), color, h_labels):
         ax[0].plot(mu_d, mu_hat[:,i], label = label, c = c)
         ax[1].plot(mu_d, sigma_hat[:,i], label = label, c = c)
@@ -237,6 +240,17 @@ if __name__ == "__main__":
               title = 'Variance')
     fig.suptitle('Estimators of time distribution COD')
     fig.savefig(loc_fig + 'estimator_COD.png')
+    
+    fig, ax = plt.subplots(1,1, figsize = (15, 5))
+    for i, c, label in zip(range(n_h), color, h_labels):
+        ax.plot(mu_d, n_clouds[:,i], label = label, c = c)
+
+    ax.legend()
+    ax.set(xlabel = 'Current state COD (log($\cdot$)',
+              ylabel = 'N',
+              title = 'number of data points per bin')
+    
+    fig.savefig(loc_fig + 'n_estimator.png')    
     
         
 
