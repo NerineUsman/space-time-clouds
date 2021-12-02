@@ -8,19 +8,23 @@ Created on Mon Nov 29 11:05:38 2021
 """
 
 # import modules
-import os
+import os, sys
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 import pandas as pd
 from matplotlib.pyplot import cm
 
+sys.path.insert(0, './space-time-clouds/lib')
+sys.path.insert(0, '../lib')
+import ml_estimation as ml
+
 
 
 
 # variables
-# input_file = 'input_model1_local.txt'
-input_file = './space-time-clouds/src/input_model1.txt'
+input_file = 'input_model1_local.txt'
+# input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
 dlim = [-1.5, 5.1] #log (d)
@@ -219,6 +223,16 @@ if __name__ == "__main__":
     sigma_hat = sigma_hat.reshape((len(mu_d), len(mu_h)))
     n_clouds = n_clouds.reshape((len(mu_d), len(mu_h)))
     
+    
+    ## ml estimation
+    df_cc['constant'] = 1
+    df_cc['hd'] = df_cc.h_t * df_cc.d_t
+    sm_ml_manual = ml.MyDepNormML(df_cc.d_t_next,df_cc[['constant','h_t', 'd_t', 'hd']]).fit(
+                        start_params = [1, .001, 0.9, 0, .7, .001])
+    print(sm_ml_manual.summary())
+    beta = sm_ml_manual.params[:4]
+    gamma = sm_ml_manual.params[-2:]
+    
     h_labels = [f'cth = {h * 1e-3} km' for h in mu_h]
     
     color= cm.Blues(np.linspace(.2,1, len(mu_h)))
@@ -227,6 +241,7 @@ if __name__ == "__main__":
     ax[0].plot(mu_d, mu_d, label = 'bin center', c = 'r')
     for i, c, label in zip(range(n_h), color, h_labels):
         ax[0].plot(mu_d, mu_hat[:,i], label = label, c = c)
+        # ax[0].plot(mu_d, )
         ax[1].plot(mu_d, sigma_hat[:,i], label = label, c = c)
 
     ax[0].legend()
@@ -251,6 +266,7 @@ if __name__ == "__main__":
               title = 'number of data points per bin')
     
     fig.savefig(loc_fig + 'n_estimator.png')    
+    
     
         
 
