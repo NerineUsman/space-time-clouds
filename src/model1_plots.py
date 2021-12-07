@@ -23,8 +23,8 @@ import ml_estimation as ml
 
 
 # variables
-input_file = 'input_model1_local.txt'
-# input_file = './space-time-clouds/src/input_model1.txt'
+# input_file = 'input_model1_local.txt'
+input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
 dlim = [-1.5, 5.1] #log (d)
