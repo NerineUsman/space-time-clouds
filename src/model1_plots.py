@@ -236,14 +236,26 @@ if __name__ == "__main__":
     h_labels = [f'cth = {h * 1e-3} km' for h in mu_h]
     
     color= cm.Blues(np.linspace(.2,1, len(mu_h)))
+    color_ml= cm.Greens(np.linspace(.2,1, len(mu_h)))
     
     fig, ax = plt.subplots(1, 2, figsize = (15, 5))
     ax[0].plot(mu_d, mu_d, label = 'bin center', c = 'r')
-    for i, c, label in zip(range(n_h), color, h_labels):
-        ax[0].plot(mu_d, mu_hat[:,i], label = label, c = c)
+    
+    for i, c, c_ml, label in zip(range(n_h), color, color_ml, h_labels):
+        ax[0].plot(mu_d, mu_hat[:,i], label = label, c = c,
+                   # marker = '.', ls = '--'
+                   )
         # ax[0].plot(mu_d, )
-        ax[1].plot(mu_d, sigma_hat[:,i], label = label, c = c)
+        ax[1].plot(mu_d, sigma_hat[:,i], label = label, c = c,
+                   # marker = '.', ls = '--'
+                   )
+        if i % 3 == 0:
+            mu_ml, sigma_ml = np.array([ml.model1(mu_h[i], d, beta, gamma) for d in mu_d]).T
+            ax[0].plot(mu_d, mu_ml, label = label + ' ml estimator',
+                       c = c_ml)
+            ax[1].plot(mu_d, sigma_ml, label = label + ' ml estimator', c = c_ml)
 
+    
     ax[0].legend()
     ax[0].set(xlabel = 'Current state COD (log($\cdot$)',
               ylabel = '$\hat{\mu_d}$',

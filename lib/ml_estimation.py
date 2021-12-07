@@ -18,12 +18,17 @@ def _ll_ols(y, X, beta, gamma):
     sigma = X[:,:2].dot(gamma)
     return norm(mu,sigma).logpdf(y).sum()    
 
+def model1(h, d, beta, gamma):
+    X = np.array([1, h, d, h*d])
+    mu = X.dot(beta)
+    sigma = X[:2].dot(gamma)
+    return mu, sigma
+    
 
 class MyDepNormML(GenericLikelihoodModel):
     def __init__(self, endog, exog, **kwds):
         super(MyDepNormML, self).__init__(endog, exog, **kwds)
     def nloglikeobs(self, params):
-        print(params)
         gamma = params[-2:]
         beta = params[:-2]
         ll = _ll_ols(self.endog, self.exog, beta, gamma)
@@ -38,3 +43,4 @@ class MyDepNormML(GenericLikelihoodModel):
         return super(MyDepNormML, self).fit(start_params=start_params, 
                                   maxiter=maxiter, maxfun=maxfun, 
                                   **kwds)
+    
