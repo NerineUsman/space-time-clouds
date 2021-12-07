@@ -23,8 +23,8 @@ import ml_estimation as ml
 
 
 # variables
-input_file = 'input_model1_local.txt'
-# input_file = './space-time-clouds/src/input_model1.txt'
+# input_file = 'input_model1_local.txt'
+input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
 dlim = [-1.5, 5.1] #log (d)
@@ -71,7 +71,7 @@ def plot_distribution_next_cloud(df, title = None, nbins = 50, **kwargs):
     bins = [nbins, nbins]
     h = ax[2].hist2d(df.d_t_next, df.h_t_next*1e-3, bins=bins, 
                      cmap=plt.cm.Blues,
-                      # norm=mpl.colors.lognorm(),
+                       norm=mpl.colors.lognorm(),
                      **kwargs)
     ax[2].set_xlabel('COD (log($\cdot$)')
     ax[2].set_ylabel('CTH (km)')
@@ -216,7 +216,7 @@ if __name__ == "__main__":
         if n <= 1:
             continue
         mu_hat[i] = df_temp.d_t_next.mean()
-        sigma_hat[i] = n / (n-1) * df_temp.d_t_next.var()
+        sigma_hat[i] = np.sqrt(n / (n-1) * df_temp.d_t_next.var())
         i += 1
     
     mu_hat = mu_hat.reshape((len(mu_d), len(mu_h)))
@@ -238,6 +238,10 @@ if __name__ == "__main__":
     color= cm.Blues(np.linspace(.2,1, len(mu_h)))
     color_ml= cm.Greens(np.linspace(.2,1, len(mu_h)))
     
+    
+# =============================================================================
+#     Estimators for mu and sigma
+# =============================================================================
     fig, ax = plt.subplots(1, 2, figsize = (15, 5))
     ax[0].plot(mu_d, mu_d, label = 'bin center', c = 'r')
     
@@ -249,13 +253,7 @@ if __name__ == "__main__":
         ax[1].plot(mu_d, sigma_hat[:,i], label = label, c = c,
                    # marker = '.', ls = '--'
                    )
-        if i % 3 == 0:
-            mu_ml, sigma_ml = np.array([ml.model1(mu_h[i], d, beta, gamma) for d in mu_d]).T
-            ax[0].plot(mu_d, mu_ml, label = label + ' ml estimator',
-                       c = c_ml)
-            ax[1].plot(mu_d, sigma_ml, label = label + ' ml estimator', c = c_ml)
 
-    
     ax[0].legend()
     ax[0].set(xlabel = 'Current state COD (log($\cdot$)',
               ylabel = '$\hat{\mu_d}$',
@@ -263,11 +261,51 @@ if __name__ == "__main__":
     
     ax[1].legend()
     ax[1].set(xlabel = 'Current state COD (log($\cdot$)',
-              ylabel = '$\hat{\sigma^2_d}$',
+              ylabel = '$\hat{\sigma_d}$',
               title = 'Variance')
     fig.suptitle('Estimators of time distribution COD')
-    fig.savefig(loc_fig + 'estimator_COD.png')
+    fig.savefig(loc_fig + 'estimator_COD_local.png')
     
+    
+# =============================================================================
+#     Maximum likelihood
+# =============================================================================
+    fig, ax = plt.subplots(1, 2, figsize = (15, 5))
+    ax[0].plot(mu_d, mu_d, label = 'bin center', c = 'r')
+    
+    for i, c, c_ml, label in zip(range(n_h), color, color_ml, h_labels):
+        if i % 3 == 0:
+            ax[0].plot(mu_d, mu_hat[:,i], label = label, c = c,
+                       # marker = '.', ls = '--'
+                       )
+            # ax[0].plot(mu_d, )
+            ax[1].plot(mu_d, sigma_hat[:,i], label = label, c = c,
+                       # marker = '.', ls = '--'
+                       )
+            mu_ml, sigma_ml = np.array([ml.model1(mu_h[i], d, beta, gamma) for d in mu_d]).T
+            ax[0].plot(mu_d, mu_ml, label = label + ' ml estimator',
+                       c = c_ml)
+            ax[1].plot(mu_d, sigma_ml, label = label + ' ml estimator', c = c_ml)
+
+    
+
+
+    ax[0].legend()
+    ax[0].set(xlabel = 'Current state COD (log($\cdot$)',
+              ylabel = '$\hat{\mu_d}$',
+              title = 'Mean')
+    
+    ax[1].legend()
+    ax[1].set(xlabel = 'Current state COD (log($\cdot$)',
+              ylabel = '$\hat{\sigma_d}$',
+              title = 'Variance')
+    fig.suptitle('Estimators of time distribution COD')
+    fig.savefig(loc_fig + 'estimator_COD_ML.png')
+
+    
+# =============================================================================
+#     Number of points per bin 
+# =============================================================================
     fig, ax = plt.subplots(1,1, figsize = (15, 5))
     for i, c, label in zip(range(n_h), color, h_labels):
         ax.plot(mu_d, n_clouds[:,i], label = label, c = c)

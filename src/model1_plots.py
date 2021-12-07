@@ -71,7 +71,7 @@ def plot_distribution_next_cloud(df, title = None, nbins = 50, **kwargs):
     bins = [nbins, nbins]
     h = ax[2].hist2d(df.d_t_next, df.h_t_next*1e-3, bins=bins, 
                      cmap=plt.cm.Blues,
-                       norm=mpl.colors.lognorm(),
+                       norm=mpl.colors.LogNorm(),
                      **kwargs)
     ax[2].set_xlabel('COD (log($\cdot$)')
     ax[2].set_ylabel('CTH (km)')
