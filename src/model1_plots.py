@@ -23,8 +23,8 @@ import ml_estimation as ml
 
 
 # variables
-# input_file = 'input_model1_local.txt'
-input_file = './space-time-clouds/src/input_model1.txt'
+input_file = 'input_model1_local.txt'
+# input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
 dlim = [-1.5, 5.1] #log (d)
@@ -51,9 +51,10 @@ def state_bins(mu_h, mu_d, delta_h = 300, delta_d =.1):
     """
     mu_h, mu_d = np.meshgrid(mu_h, mu_d)
     mu_h, mu_d = [x.flatten() for x in [mu_h, mu_d]]
-
+    
+    bincenter = (mu_h, mu_d)
     bins = [[[h - delta_h, h + delta_h], [d - delta_d, d + delta_d]] for h,d in zip(mu_h, mu_d)]
-    return bins
+    return bins, bincenter
 
 
 def plot_distribution_next_cloud(df, title = None, nbins = 50, **kwargs):
@@ -174,7 +175,7 @@ if __name__ == "__main__":
     mu_d = [0, 1, 2, 3]
     
 
-    bins = state_bins(mu_h, mu_d)
+    bins, (bincenter_h, bincenter_d) = state_bins(mu_h, mu_d)
     
     i = 0
     for b in bins:       
@@ -182,17 +183,19 @@ if __name__ == "__main__":
         # filter cloud to cloud on from within bin
         df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
+        
         if len(df_temp) <= 1:
             continue
-        title = f'Bin centre (h, d) = ({mu_h[i]*1e-3} km, {mu_d[i]}), n = {len(df_temp)}'
+        
+        title = f'Bin centre (h, d) = ({bincenter_h[i]*1e-3} km, {bincenter_d[i]}), n = {len(df_temp)}'
         fig, ax = plot_distribution_next_cloud(df_temp, title = title, density = True)
-        ax[0].axvline(mu_h[i]*1e-3, color = 'r', label = 'bin center')
+        ax[0].axvline(bincenter_h[i]*1e-3, color = 'r', label = 'bin center')
         ax[0].legend()
-        ax[1].axvline(mu_d[i], color = 'r', label = 'bin center')
+        ax[1].axvline(bincenter_d[i], color = 'r', label = 'bin center')
         ax[1].legend()
-        ax[2].plot(mu_d[i], mu_h[i]*1e-3,'ro', label = 'bin center')
+        ax[2].plot(bincenter_d[i], bincenter_h[i]*1e-3,'ro', label = 'bin center')
         ax[2].legend()
-        fig.savefig(f'{loc_fig}cloud_to_cloud_(h_d)_({mu_h[i]*1e-3}_{mu_d[i]}).png')
+        fig.savefig(f'{loc_fig}cloud_to_cloud_(h_d)_({bincenter_h[i]*1e-3}_{bincenter_d[i]}).png')
         plt.show()
         i += 1
         
