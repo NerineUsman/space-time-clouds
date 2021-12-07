@@ -177,24 +177,24 @@ if __name__ == "__main__":
     bins = state_bins(mu_h, mu_d)
     
     i = 0
-    # for b in bins:       
-    #     print(b)
-    #     # filter cloud to cloud on from within bin
-    #     df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
-    #                         & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
-    #     if len(df_temp) <= 1:
-    #         continue
-    #     title = f'Bin centre (h, d) = ({mu_h[i]*1e-3} km, {mu_d[i]}), n = {len(df_temp)}'
-    #     fig, ax = plot_distribution_next_cloud(df_temp, title = title, density = True)
-    #     ax[0].axvline(mu_h[i]*1e-3, color = 'r', label = 'bin center')
-    #     ax[0].legend()
-    #     ax[1].axvline(mu_d[i], color = 'r', label = 'bin center')
-    #     ax[1].legend()
-    #     ax[2].plot(mu_d[i], mu_h[i]*1e-3,'ro', label = 'bin center')
-    #     ax[2].legend()
-    #     fig.savefig(f'{loc_fig}cloud_to_cloud_(h_d)_({mu_h[i]*1e-3}_{mu_d[i]}).png')
-    #     plt.show()
-    #     i += 1
+    for b in bins:       
+        print(b)
+        # filter cloud to cloud on from within bin
+        df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
+                            & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
+        if len(df_temp) <= 1:
+            continue
+        title = f'Bin centre (h, d) = ({mu_h[i]*1e-3} km, {mu_d[i]}), n = {len(df_temp)}'
+        fig, ax = plot_distribution_next_cloud(df_temp, title = title, density = True)
+        ax[0].axvline(mu_h[i]*1e-3, color = 'r', label = 'bin center')
+        ax[0].legend()
+        ax[1].axvline(mu_d[i], color = 'r', label = 'bin center')
+        ax[1].legend()
+        ax[2].plot(mu_d[i], mu_h[i]*1e-3,'ro', label = 'bin center')
+        ax[2].legend()
+        fig.savefig(f'{loc_fig}cloud_to_cloud_(h_d)_({mu_h[i]*1e-3}_{mu_d[i]}).png')
+        plt.show()
+        i += 1
         
     # cod estimators normal distribution
     mu_h = np.arange(1e3, 14e3, 2e3) # m
