@@ -23,8 +23,8 @@ import ml_estimation as ml
 
 
 # variables
-# input_file = 'input_model1_local.txt'
-input_file = './space-time-clouds/src/input_model1.txt'
+input_file = 'input_model1_local.txt'
+# input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
 dlim = [-1.5, 5.1] #log (d)
@@ -199,6 +199,8 @@ if __name__ == "__main__":
         plt.show()
         i += 1
         
+    plt.close('all')
+        
     # cod estimators normal distribution
     mu_h = np.arange(1e3, 14e3, 2e3) # m
     mu_d = np.arange(0, 4, .1)
@@ -269,7 +271,7 @@ if __name__ == "__main__":
     fig.suptitle('Estimators of time distribution COD')
     fig.savefig(loc_fig + 'estimator_COD_local.png')
     
-    
+    plt.close('all')
 # =============================================================================
 #     Maximum likelihood
 # =============================================================================
