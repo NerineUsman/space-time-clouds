@@ -23,8 +23,8 @@ import ml_estimation as ml
 
 
 # variables
-# input_file = 'input_model1_local.txt'
-input_file = './space-time-clouds/src/input_model1.txt'
+input_file = 'input_model1_local.txt'
+# input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
 dlim = [-1.5, 5.1] #log (d)
@@ -204,7 +204,7 @@ if __name__ == "__main__":
     mu_d = np.arange(0, 4, .1)
     n_h = len(mu_h)
     
-    bins = state_bins(mu_h, mu_d)
+    bins, bin_center = state_bins(mu_h, mu_d)
     mu_hat = np.zeros((len(mu_h) * len(mu_d)))
     sigma_hat = np.zeros((len(mu_h) * len(mu_d)))
     n_clouds = np.zeros((len(mu_h) *len(mu_d)))
