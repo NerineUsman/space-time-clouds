@@ -4,6 +4,6 @@ start_date    03-02-2021
 end_date      01-03-2021
 start_time    00:00
 end_time      23:59
-dx            50
-dy            50
+dx            15
+dy            15
 loc_fig       ./space-time-clouds/fig/model1/
