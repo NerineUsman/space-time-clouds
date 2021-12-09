@@ -24,8 +24,8 @@ import ml_estimation as ml
 
 # variables
 src_path = os.path.dirname(os.path.realpath(__file__))
-input_file = src_path + '\input_model1_local.txt'
-input_file = './space-time-clouds/src/input_model1.txt'
+input_file = src_path + '\input_model1.txt'
+# input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
 dlim = [-1.5, 5.1] #log (d)
@@ -63,7 +63,7 @@ def plot_distribution_next_cloud(df, title = None, nbins = 50, ML = True, **kwar
     # histograms
     ax[0].hist(df.h_t_next * 1e-3, bins = nbins, **kwargs)
     ax[1].hist(df.d_t_next, bins = nbins, **kwargs)
-
+    converged = 'unknown'
     # ML likelihood fits
     if (ML == True) and (len(df)>= 10):
         h_ = ml.CTHtoUnitInt(df.h_t_next)
@@ -71,16 +71,20 @@ def plot_distribution_next_cloud(df, title = None, nbins = 50, ML = True, **kwar
             h_ = h_.sample(int(1e4))
         cth_ml_manual = ml.MyMixBetaML(h_, h_).fit(
                     start_params = [1, 1, 1, 1, .5])
-        dx = .01
-        x = np.arange(0, 1, dx)
-        x_h = ml.UnitInttoCTH(x) * 1e-3
-        dx_h = x_h[1] - x_h[0]
-        ax[0].plot(x_h,  ml.pdf_bmix(x, *cth_ml_manual.params) * dx / dx_h, 
-                   label = 'Maximum likelihood')
-        ax[0].legend()
+        converged = cth_ml_manual.mle_retvals["converged"]
+        if ~cth_ml_manual.mle_retvals['warnflag']:
+            dx = .01
+            x = np.arange(0, 1, dx)
+            x_h = ml.UnitInttoCTH(x) * 1e-3
+            dx_h = x_h[1] - x_h[0]
+            ax[0].plot(x_h,  ml.pdf_bmix(x, *cth_ml_manual.params) * dx / dx_h, 
+                        label = 'Maximum likelihood')
+            ax[0].legend()
+        else:
+            print ('bad convergence')
     
     # titles etc.
-    ax[0].set_title('CTH (km)')
+    ax[0].set_title(f'CTH (km) | converged {converged}')
     ax[0].set_xlim(hlim)
     ax[1].set_title('COD (log($\cdot$)')
     ax[1].set_xlim(dlim)
@@ -133,14 +137,14 @@ if __name__ == "__main__":
     df_cc = df.loc[(df.cloud == 'cloud') & (df.cloud_next == 'cloud') ]
     df_cc.insert(len(df_cc.columns), 'dh', df_cc.apply(lambda row: row.h_t_next - row.h_t, axis = 1))
     df_cc.insert(len(df_cc.columns), 'dd', df_cc.apply(lambda row: row.d_t_next - row.d_t, axis = 1))
-    df_cc.head()
+    df_cc = df_cc.copy()
         
 # =============================================================================
 #   Clear sky to cloud
 # =============================================================================
 
     df_sc = df.loc[(df.cloud == 'clear sky') & (df.cloud_next == 'cloud') ]
-
+    df_sc = df_sc.copy()
 # =============================================================================
 #   To clear sky
 # =============================================================================
@@ -194,14 +198,15 @@ if __name__ == "__main__":
 
     bins, (bincenter_h, bincenter_d) = state_bins(mu_h, mu_d)
     
-    i = 0
-    for b in bins:       
+    for i, b in zip(range(len(bins)), bins):       
         print(b)
         # filter cloud to cloud on from within bin
         df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
-        
+
         if len(df_temp) <= 1:
+            print('not enough data')
+            
             continue
         
         title = f'Bin centre (h, d) = ({bincenter_h[i]*1e-3} km, {bincenter_d[i]}), n = {len(df_temp)}'
@@ -214,7 +219,6 @@ if __name__ == "__main__":
         ax[2].legend()
         fig.savefig(f'{loc_fig}cloud_to_cloud_(h_d)_({bincenter_h[i]*1e-3}_{bincenter_d[i]}).png')
         plt.show()
-        i += 1
         
     plt.close('all')
         
@@ -234,11 +238,13 @@ if __name__ == "__main__":
     n_clouds = np.zeros((len(mu_h) *len(mu_d)))
     
     cth_params = np.zeros((n_h * n_d , 5))
+    cth_conv_flag = np.zeros((n_h * n_d,1))
     
     for i, b in zip(range(len(bins)), bins):
         # filter cloud to cloud on from within bin
         df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])] 
+        df_temp = df_temp.copy()
         n = len(df_temp)
         n_clouds[i] = n
 
@@ -260,9 +266,22 @@ if __name__ == "__main__":
             h_ = h_.sample(int(1e4))
         cth_ml_manual = ml.MyMixBetaML(h_, h_).fit(
                 start_params = [1, 1, 1, 1, .5])
+        if cth_ml_manual.mle_retvals['warnflag']:
+            print(f'Bad convergence bin {b}, estimates {cth_ml_manual.params}')
         
         cth_params[i] = cth_ml_manual.params
+        cth_conv_flag[i] = cth_ml_manual.mle_retvals['warnflag']
         
+    
+    df_cth_param = pd.DataFrame(np.hstack([cth_params, cth_conv_flag]),
+                                columns = ['alpha1', 
+                                           'beta1', 
+                                           'alpha2', 
+                                           'beta2', 
+                                           'p', 
+                                           'flag'])
+    df_cth_param.to_csv(loc_fig + 'cth_param.csv')
+
     
     mu_hat = mu_hat.reshape((len(mu_d), len(mu_h)))
     sigma_hat = sigma_hat.reshape((len(mu_d), len(mu_h)))
