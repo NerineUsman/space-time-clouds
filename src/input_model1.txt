@@ -1,7 +1,7 @@
 loc_clean_data  /net/labdata/nerine/space-time-clouds/data/clean_data/
 loc_model1_data /net/labdata/nerine/space-time-clouds/data/model1_data/
-start_date    03-02-2021
-end_date      01-03-2021
+start_date    31-01-2021
+end_date      03-02-2021
 start_time    00:00
 end_time      23:59
 dx            15
