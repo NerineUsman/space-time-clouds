@@ -23,8 +23,9 @@ import ml_estimation as ml
 
 
 # variables
-# input_file = 'input_model1_local.txt'
-input_file = './space-time-clouds/src/input_model1.txt'
+src_path = os.path.dirname(os.path.realpath(__file__))
+input_file = src_path + '\input_model1_local.txt'
+# input_file = './space-time-clouds/src/input_model1_local.txt'
 
 hlim = [0, 16] #km
 dlim = [-1.5, 5.1] #log (d)
