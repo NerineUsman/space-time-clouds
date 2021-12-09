@@ -256,6 +256,8 @@ if __name__ == "__main__":
             continue
         
         h_ = ml.CTHtoUnitInt(df_temp.h_t_next)
+        if len(h_) > 1e4:
+            h_ = h_.sample(int(1e4))
         cth_ml_manual = ml.MyMixBetaML(h_, h_).fit(
                 start_params = [1, 1, 1, 1, .5])
         
