@@ -25,7 +25,7 @@ import ml_estimation as ml
 # variables
 src_path = os.path.dirname(os.path.realpath(__file__))
 input_file = src_path + '\input_model1_local.txt'
-# input_file = './space-time-clouds/src/input_model1_local.txt'
+input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
 dlim = [-1.5, 5.1] #log (d)
@@ -67,6 +67,8 @@ def plot_distribution_next_cloud(df, title = None, nbins = 50, ML = True, **kwar
     # ML likelihood fits
     if (ML == True) and (len(df)>= 10):
         h_ = ml.CTHtoUnitInt(df.h_t_next)
+        if len(h_) > 1e4:
+            h_ = h_.sample(int(1e4))
         cth_ml_manual = ml.MyMixBetaML(h_, h_).fit(
                     start_params = [1, 1, 1, 1, .5])
         dx = .01
