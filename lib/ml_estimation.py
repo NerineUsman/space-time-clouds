@@ -46,7 +46,7 @@ class MyDepNormML(GenericLikelihoodModel):
                                   maxiter=maxiter, maxfun=maxfun, 
                                   **kwds)
 
-def _ll_beta(y, X, alpha1, beta1, alpha2, beta2, p):
+def _ll_beta_mix(y, X, alpha1, beta1, alpha2, beta2, p):
     B1 = beta(alpha1, beta1).pdf(y)
     B2 = beta(alpha2, beta2).pdf(y)
     if p < 0: 
@@ -79,7 +79,7 @@ class MyMixBetaML(GenericLikelihoodModel):
         alpha1, beta1 = params[:2]
         alpha2, beta2 = params[2:4]
         p = params[4]
-        ll = _ll_beta(self.endog, self.exog, alpha1, beta1, alpha2, beta2, p)
+        ll = _ll_beta_mix(self.endog, self.exog, alpha1, beta1, alpha2, beta2, p)
         return -ll
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
         # we have one additional parameter and we need to add it for summary
@@ -93,6 +93,34 @@ class MyMixBetaML(GenericLikelihoodModel):
             # Reasonable starting values
             start_params = np.append(np.zeros(self.exog.shape[1]), [0.5])
         return super(MyMixBetaML, self).fit(start_params=start_params, 
+                                  maxiter=maxiter, maxfun=maxfun, 
+                                  **kwds)
+
+def _ll_beta(y, X, alpha1, beta1):
+    B = beta(alpha1, beta1)
+    return B.logpdf(y).sum()    
+
+def pdf_b(y, alpha1, beta1):
+    B = beta(alpha1, beta1).pdf(y)
+    return B
+
+
+class MyBetaML(GenericLikelihoodModel):
+    def __init__(self, endog, exog, **kwds):
+        super(MyBetaML, self).__init__(endog, exog, **kwds)
+    def nloglikeobs(self, params):
+        alpha, beta = params
+        ll = _ll_beta(self.endog, self.exog, alpha, beta)
+        return -ll
+    def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
+        # we have one additional parameter and we need to add it for summary
+        self.exog_names.pop()
+        self.exog_names.append('alpha')
+        self.exog_names.append('beta')                               
+        if start_params == None:
+            # Reasonable starting values
+            start_params = np.append([1,1])
+        return super(MyBetaML, self).fit(start_params=start_params, 
                                   maxiter=maxiter, maxfun=maxfun, 
                                   **kwds)
     

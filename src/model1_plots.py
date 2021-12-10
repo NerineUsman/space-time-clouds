@@ -24,7 +24,7 @@ import ml_estimation as ml
 
 # variables
 src_path = os.path.dirname(os.path.realpath(__file__))
-input_file = src_path + '/input_model1.txt'
+input_file = src_path + '/input_model1_local.txt'
 # input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
@@ -58,38 +58,53 @@ def state_bins(mu_h, mu_d, delta_h = 300, delta_d =.1):
     return bins, bincenter
 
 
-def plot_distribution_next_cloud(df, title = None, nbins = 50, ML = True, **kwargs):
+def plot_distribution_next_cloud(df, 
+                                 title = None, 
+                                 nbins = 50, 
+                                 mixture = False,
+                                 ML = True,
+                                 **kwargs):
     fig, ax = plt.subplots(1,3,figsize = (20, 4))
     # histograms
     ax[0].hist(df.h_t_next * 1e-3, bins = nbins, **kwargs)
     ax[1].hist(df.d_t_next, bins = nbins, **kwargs)
     converged = 'unknown'
     # ML likelihood fits
+    
+    
     if (ML == True) and (len(df)>= 10):
         h_ = ml.CTHtoUnitInt(df.h_t_next)
         if len(h_) > 1e4:
             h_ = h_.sample(int(1e4))
-        cth_ml_manual = ml.MyMixBetaML(h_, h_).fit(
-                    start_params = [1, 1, 1, 1, .5])
-        converged = cth_ml_manual.mle_retvals["converged"]
-        if ~cth_ml_manual.mle_retvals['warnflag']:
-            dx = .01
-            x = np.arange(0, 1, dx)
-            x_h = ml.UnitInttoCTH(x) * 1e-3
-            dx_h = x_h[1] - x_h[0]
-            p = cth_ml_manual.params[-1]
-            if p > 1:
-                p = 1
-            elif p < 0:
-                p = 0
-            cth_ml_manual.params[-1] = p
-                        
-            ax[0].plot(x_h,  ml.pdf_bmix(x, *cth_ml_manual.params) * dx / dx_h, 
-                        label = f'Maximum likelihood p = {p:.2e}')
+        
+        dx = .01
+        x = np.arange(0, 1, dx)
+        x_h = ml.UnitInttoCTH(x) * 1e-3
+        dx_h = x_h[1] - x_h[0]
+        if mixture:
+            cth_ml_manual = ml.MyMixBetaML(h_, h_).fit(
+                        start_params = [1, 1, 1, 1, .5])
+            converged = cth_ml_manual.mle_retvals["converged"]
+            if ~cth_ml_manual.mle_retvals['warnflag']:
+                p = cth_ml_manual.params[-1]
+                if p > 1:
+                    p = 1
+                elif p < 0:
+                    p = 0
+                cth_ml_manual.params[-1] = p
+                            
+                ax[0].plot(x_h,  ml.pdf_bmix(x, *cth_ml_manual.params) * dx / dx_h, 
+                            label = f'Maximum likelihood BetaMix p = {p:.2e}')
+                ax[0].legend()
+            else:
+                print ('bad convergence')
+        else: 
+            cth_ml_manual = ml.MyBetaML(h_, h_).fit(
+                    start_params = [1, 1])
+            converged = cth_ml_manual.mle_retvals["converged"]
+            ax[0].plot(x_h,  ml.pdf_b(x, *cth_ml_manual.params) * dx / dx_h, 
+                            label = 'Maximum likelihood Beta')
             ax[0].legend()
-        else:
-            print ('bad convergence')
-    
     # titles etc.
     ax[0].set_title(f'CTH (km) | converged {converged}')
     ax[0].set_xlim(hlim)
@@ -162,16 +177,21 @@ if __name__ == "__main__":
 #   plots
 # =============================================================================
 
-    # joint density
-    title = f'Cloud distributions, n = {len(df_cc) + len(df_sc)}'
-    fig, ax = plot_distribution_next_cloud(pd.concat([df_cc, df_sc]), title = title, density = True )
-    fig.savefig(loc_fig + 'cloud_distr.png')
+    # # joint density
+    # title = f'Cloud distributions, n = {len(df_cc) + len(df_sc)}'
+    # fig, ax = plot_distribution_next_cloud(pd.concat([df_cc, df_sc]),
+    #                                        title = title, 
+    #                                        mixture = True,
+    #                                        density = True )
+    # fig.savefig(loc_fig + 'cloud_distr.png')
 
     
-    # distribution for clouds after clear sky
-    title = f'Clear sky to cloud distributions, n = {len(df_sc)}'
-    fig, ax = plot_distribution_next_cloud(df_sc, title = title, density = True )
-    fig.savefig(loc_fig + 'clear_sky_to_cloud_distr.png')
+    # # distribution for clouds after clear sky
+    # title = f'Clear sky to cloud distributions, n = {len(df_sc)}'
+    # fig, ax = plot_distribution_next_cloud(df_sc, title = title,
+    #                                        mixture = True,
+    #                                        density = True )
+    # fig.savefig(loc_fig + 'clear_sky_to_cloud_distr.png')
 
     
     # # cloud to cloud overview
@@ -244,7 +264,7 @@ if __name__ == "__main__":
     sigma_hat = np.zeros((len(mu_h) * len(mu_d)))
     n_clouds = np.zeros((len(mu_h) *len(mu_d)))
     
-    cth_params = np.zeros((n_h * n_d , 5))
+    cth_params = np.zeros((n_h * n_d , 2))
     cth_conv_flag = np.zeros((n_h * n_d,1))
     
     for i, b in zip(range(len(bins)), bins):
@@ -271,8 +291,8 @@ if __name__ == "__main__":
         h_ = ml.CTHtoUnitInt(df_temp.h_t_next)
         if len(h_) > 1e4:
             h_ = h_.sample(int(1e4))
-        cth_ml_manual = ml.MyMixBetaML(h_, h_).fit(
-                start_params = [1, 1, 1, 1, .5])
+        cth_ml_manual = ml.MyBetaML(h_, h_).fit(
+                start_params = [1, 1])
         if cth_ml_manual.mle_retvals['warnflag']:
             print(f'Bad convergence bin {b}, estimates {cth_ml_manual.params}')
         
@@ -283,11 +303,11 @@ if __name__ == "__main__":
     df_cth_param = pd.DataFrame(np.hstack([cth_params, cth_conv_flag]),
                                 columns = ['alpha1', 
                                            'beta1', 
-                                           'alpha2', 
-                                           'beta2', 
-                                           'p', 
+                                           # 'alpha2', 
+                                           # 'beta2', 
+                                           # 'p', 
                                            'flag'])
-    df_cth_param.to_csv(loc_fig + 'cth_param.csv')
+    df_cth_param.to_csv(loc_fig + 'cth_param_singlebeta.csv')
 
     
     mu_hat = mu_hat.reshape((len(mu_d), len(mu_h)))
@@ -394,93 +414,93 @@ if __name__ == "__main__":
 # =============================================================================
 #     CTH - estimators for alpha1, beta1, alpha2, beta2, p in bins
 # =============================================================================
-    fig, ax = plt.subplots(2, 3, figsize = (18, 9))
+    # fig, ax = plt.subplots(2, 3, figsize = (18, 9))
     
-    alpha1, beta1, alpha2, beta2, p = [a.reshape((n_d, n_h)) for a in cth_params.T]
-    title = ['$\\hat{\\alpha_1}$', '$\\hat{\\beta_1}$', '$\\hat{p}$', 
-             '$\\hat{\\alpha_2}$', '$\\hat{\\beta_2}$']
+    # alpha1, beta1, alpha2, beta2, p = [a.reshape((n_d, n_h)) for a in cth_params.T]
+    # title = ['$\\hat{\\alpha_1}$', '$\\hat{\\beta_1}$', '$\\hat{p}$', 
+    #          '$\\hat{\\alpha_2}$', '$\\hat{\\beta_2}$']
     
-    for i, c, c_ml, label in zip(range(n_h), color, color_ml, h_labels):
-        ax[0,0].plot(mu_d, alpha1[:,i], label = label, c = c,
-                    marker = '*', 
-                   # ls = '--'
-                   )
-        # ax[0].plot(mu_d, )
-        ax[0,1].plot(mu_d, beta1[:,i], label = label, c = c,
-                    marker = '*', 
-                   # ls = '--'
-                   )
-        ax[0,2].plot(mu_d, p[:,i], label = label, c = c,
-                    marker = '*', 
-                   # ls = '--'
-                   )
-        ax[1,0].plot(mu_d, alpha2[:,i], label = label, c = c,
-                    marker = '*', 
-                   # ls = '--'
-                   )
-        ax[1,1].plot(mu_d, beta2[:,i], label = label, c = c,
-                    marker = '*', 
-                   # ls = '--'
-                   )
-        ax[1,2].plot(mu_d, alpha1[:,i], label = label, c = c)
-        ax[1,2].legend()
+    # for i, c, c_ml, label in zip(range(n_h), color, color_ml, h_labels):
+    #     ax[0,0].plot(mu_d, alpha1[:,i], label = label, c = c,
+    #                 marker = '*', 
+    #                # ls = '--'
+    #                )
+    #     # ax[0].plot(mu_d, )
+    #     ax[0,1].plot(mu_d, beta1[:,i], label = label, c = c,
+    #                 marker = '*', 
+    #                # ls = '--'
+    #                )
+    #     ax[0,2].plot(mu_d, p[:,i], label = label, c = c,
+    #                 marker = '*', 
+    #                # ls = '--'
+    #                )
+    #     ax[1,0].plot(mu_d, alpha2[:,i], label = label, c = c,
+    #                 marker = '*', 
+    #                # ls = '--'
+    #                )
+    #     ax[1,1].plot(mu_d, beta2[:,i], label = label, c = c,
+    #                 marker = '*', 
+    #                # ls = '--'
+    #                )
+    #     ax[1,2].plot(mu_d, alpha1[:,i], label = label, c = c)
+    #     ax[1,2].legend()
         
-    for axs, titles in zip(ax.flatten()[:-1], title):
-        axs.set(xlabel = 'Current state COD (log($\cdot$)',
-              # ylabel = '$\hat{\mu_d}$',
-              title = titles)
+    # for axs, titles in zip(ax.flatten()[:-1], title):
+    #     axs.set(xlabel = 'Current state COD (log($\cdot$)',
+    #           # ylabel = '$\hat{\mu_d}$',
+    #           title = titles)
 
     
-    fig.suptitle('Estimators of time distribution CTH')
-    fig.savefig(loc_fig + 'estimator_CTH_local.png')
+    # fig.suptitle('Estimators of time distribution CTH')
+    # fig.savefig(loc_fig + 'estimator_CTH_local.png')
     
 
-    fig, ax = plt.subplots(2, 3, figsize = (20, 10))
+    # fig, ax = plt.subplots(2, 3, figsize = (20, 10))
 
-    im = ax[0,0].pcolormesh(mu_d_, mu_h_, alpha1.T, cmap = cm.Blues)
-    plt.colorbar(im, ax=ax[0,0],
-                 # label = title[0]
-                 )
+    # im = ax[0,0].pcolormesh(mu_d_, mu_h_, alpha1.T, cmap = cm.Blues)
+    # plt.colorbar(im, ax=ax[0,0],
+    #              # label = title[0]
+    #              )
 
-    im = ax[0,1].pcolormesh(mu_d_, mu_h_, beta1.T, cmap = cm.Blues)
-    plt.colorbar(im, ax=ax[0,1],
-                 # label = title[1]
-                 )
-    im = ax[0,2].pcolormesh(mu_d_, mu_h_, p.T, cmap = cm.Blues)
-    plt.colorbar(im, ax=ax[0,2],
-                 # label = title[2]
-                 )
-    im = ax[1,0].pcolormesh(mu_d_, mu_h_, alpha2.T, cmap = cm.Blues)
-    plt.colorbar(im, ax=ax[1,0],
-                 # label = title[3]
-                 )
-    im = ax[1,1].pcolormesh(mu_d_, mu_h_, beta2.T, cmap = cm.Blues)
-    plt.colorbar(im, ax=ax[1,1],
-                 # label = title[4]
-                 )
+    # im = ax[0,1].pcolormesh(mu_d_, mu_h_, beta1.T, cmap = cm.Blues)
+    # plt.colorbar(im, ax=ax[0,1],
+    #              # label = title[1]
+    #              )
+    # im = ax[0,2].pcolormesh(mu_d_, mu_h_, p.T, cmap = cm.Blues)
+    # plt.colorbar(im, ax=ax[0,2],
+    #              # label = title[2]
+    #              )
+    # im = ax[1,0].pcolormesh(mu_d_, mu_h_, alpha2.T, cmap = cm.Blues)
+    # plt.colorbar(im, ax=ax[1,0],
+    #              # label = title[3]
+    #              )
+    # im = ax[1,1].pcolormesh(mu_d_, mu_h_, beta2.T, cmap = cm.Blues)
+    # plt.colorbar(im, ax=ax[1,1],
+    #              # label = title[4]
+    #              )
 
-    for axs, title in zip(ax.flatten()[:-1], title):
-        axs.set(xlabel = 'Current state COD (log($\cdot$)',
-              ylabel = 'Current state CTH (km)',
-              title = title)
+    # for axs, title in zip(ax.flatten()[:-1], title):
+    #     axs.set(xlabel = 'Current state COD (log($\cdot$)',
+    #           ylabel = 'Current state CTH (km)',
+    #           title = title)
 
-    fig.suptitle('Estimators of time distribution COD')
-    fig.savefig(loc_fig + 'estimator_CTH_local_colormesh.png')
+    # fig.suptitle('Estimators of time distribution COD')
+    # fig.savefig(loc_fig + 'estimator_CTH_local_colormesh.png')
     
 # =============================================================================
 #     Number of points per bin 
 # =============================================================================
 
-    fig, ax = plt.subplots(1,1, figsize = (15, 5))
-    for i, c, label in zip(range(n_h), color, h_labels):
-        ax.plot(mu_d, n_clouds[:,i], label = label, c = c)
+    # fig, ax = plt.subplots(1,1, figsize = (15, 5))
+    # for i, c, label in zip(range(n_h), color, h_labels):
+    #     ax.plot(mu_d, n_clouds[:,i], label = label, c = c)
 
-    ax.legend()
-    ax.set(xlabel = 'Current state COD (log($\cdot$)',
-              ylabel = 'N',
-              title = 'number of data points per bin')
+    # ax.legend()
+    # ax.set(xlabel = 'Current state COD (log($\cdot$)',
+    #           ylabel = 'N',
+    #           title = 'number of data points per bin')
     
-    fig.savefig(loc_fig + 'n_estimator.png')    
+    # fig.savefig(loc_fig + 'n_estimator.png')    
     
     
         
