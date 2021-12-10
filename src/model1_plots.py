@@ -230,8 +230,8 @@ if __name__ == "__main__":
     plt.close('all')
         
     # cod estimators normal distribution
-    dh = 2e3
-    dd = .1
+    dh = 500
+    dd = .7
     mu_h = np.arange(1e3, 14e3, dh) # m
     mu_d = np.arange(0, 4, dd)
     n_h = len(mu_h)
