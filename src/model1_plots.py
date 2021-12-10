@@ -174,26 +174,26 @@ if __name__ == "__main__":
     fig.savefig(loc_fig + 'clear_sky_to_cloud_distr.png')
 
     
-    # cloud to cloud overview
+    # # cloud to cloud overview
     
-    fig, ax = plt.subplots(2,3,figsize = (15, 7))
-    # cth
-    ax[0,0].hist(df_cc.h_t * 1e-3, bins = 50, density = True)
-    ax[0,0].set_title('CTH (km)')
-    ax[0,1].hist(df_cc.dh * 1e-3, bins = 200, density = True)
-    ax[0,1].set_title('$\Delta$CTH (km)')
-    ax[0,2].hist(df_cc.dh * 1e-3, bins = 200, density = True)
-    ax[0,2].set_title('$\Delta$CTH (km) zoomed')
-    ax[0,2].set(xlim = [-2, 2])
-    ax[1,0].hist(df_cc.d_t, bins = 50, density = True)
-    ax[1,0].set_title('COD ($\cdot$)')
-    ax[1,1].hist(df_cc.dd, bins = 100, density = True)
-    ax[1,1].set_title('$\Delta$COD ($\cdot$)')
-    ax[1,2].hist(df_cc.dd, bins = 100, density = True)
-    ax[1,2].set_title('$\Delta$COD zoomed')
-    ax[1,2].set(xlim = [-2, 2])
-    fig.suptitle('Cloud to Cloud')
-    fig.savefig(loc_fig + 'cloud_to_cloud_overview.png')
+    # fig, ax = plt.subplots(2,3,figsize = (15, 7))
+    # # cth
+    # ax[0,0].hist(df_cc.h_t * 1e-3, bins = 50, density = True)
+    # ax[0,0].set_title('CTH (km)')
+    # ax[0,1].hist(df_cc.dh * 1e-3, bins = 200, density = True)
+    # ax[0,1].set_title('$\Delta$CTH (km)')
+    # ax[0,2].hist(df_cc.dh * 1e-3, bins = 200, density = True)
+    # ax[0,2].set_title('$\Delta$CTH (km) zoomed')
+    # ax[0,2].set(xlim = [-2, 2])
+    # ax[1,0].hist(df_cc.d_t, bins = 50, density = True)
+    # ax[1,0].set_title('COD ($\cdot$)')
+    # ax[1,1].hist(df_cc.dd, bins = 100, density = True)
+    # ax[1,1].set_title('$\Delta$COD ($\cdot$)')
+    # ax[1,2].hist(df_cc.dd, bins = 100, density = True)
+    # ax[1,2].set_title('$\Delta$COD zoomed')
+    # ax[1,2].set(xlim = [-2, 2])
+    # fig.suptitle('Cloud to Cloud')
+    # fig.savefig(loc_fig + 'cloud_to_cloud_overview.png')
 
 
     
@@ -295,14 +295,14 @@ if __name__ == "__main__":
     n_clouds = n_clouds.reshape((len(mu_d), len(mu_h)))
     
     
-    ## ml estimation
-    df_cc['constant'] = 1
-    df_cc['hd'] = df_cc.h_t * df_cc.d_t
-    sm_ml_manual = ml.MyDepNormML(df_cc.d_t_next,df_cc[['constant','h_t', 'd_t', 'hd']]).fit(
-                        start_params = [1, .001, 0.9, 0, .7, .001])
-    print(sm_ml_manual.summary())
-    beta = sm_ml_manual.params[:4]
-    gamma = sm_ml_manual.params[-2:]
+    # ## ml estimation
+    # df_cc['constant'] = 1
+    # df_cc['hd'] = df_cc.h_t * df_cc.d_t
+    # sm_ml_manual = ml.MyDepNormML(df_cc.d_t_next,df_cc[['constant','h_t', 'd_t', 'hd']]).fit(
+    #                     start_params = [1, .001, 0.9, 0, .7, .001])
+    # print(sm_ml_manual.summary())
+    # beta = sm_ml_manual.params[:4]
+    # gamma = sm_ml_manual.params[-2:]
     
     h_labels = [f'cth = {h * 1e-3} km' for h in mu_h]
     
@@ -310,85 +310,85 @@ if __name__ == "__main__":
     color_ml= cm.Greens(np.linspace(.2,1, len(mu_h)))
     
     
-# =============================================================================
-#     COD - Estimators for mu and sigma
-# =============================================================================
-    fig, ax = plt.subplots(1, 2, figsize = (15, 5))
-    ax[0].plot(mu_d, mu_d, label = 'bin center', c = 'r')
+# # =============================================================================
+# #     COD - Estimators for mu and sigma
+# # =============================================================================
+#     fig, ax = plt.subplots(1, 2, figsize = (15, 5))
+#     ax[0].plot(mu_d, mu_d, label = 'bin center', c = 'r')
     
-    for i, c, c_ml, label in zip(range(n_h), color, color_ml, h_labels):
-        ax[0].plot(mu_d, mu_hat[:,i], label = label, c = c,
-                   # marker = '.', ls = '--'
-                   )
-        # ax[0].plot(mu_d, )
-        ax[1].plot(mu_d, sigma_hat[:,i], label = label, c = c,
-                   # marker = '.', ls = '--'
-                   )
+#     for i, c, c_ml, label in zip(range(n_h), color, color_ml, h_labels):
+#         ax[0].plot(mu_d, mu_hat[:,i], label = label, c = c,
+#                    # marker = '.', ls = '--'
+#                    )
+#         # ax[0].plot(mu_d, )
+#         ax[1].plot(mu_d, sigma_hat[:,i], label = label, c = c,
+#                    # marker = '.', ls = '--'
+#                    )
 
-    ax[0].legend()
-    ax[0].set(xlabel = 'Current state COD (log($\cdot$)',
-              ylabel = '$\hat{\mu_d}$',
-              title = 'Mean')
+#     ax[0].legend()
+#     ax[0].set(xlabel = 'Current state COD (log($\cdot$)',
+#               ylabel = '$\hat{\mu_d}$',
+#               title = 'Mean')
     
-    ax[1].legend()
-    ax[1].set(xlabel = 'Current state COD (log($\cdot$)',
-              ylabel = '$\hat{\sigma_d}$',
-              title = 'Variance')
-    fig.suptitle('Estimators of time distribution COD')
-    fig.savefig(loc_fig + 'estimator_COD_local.png')
+#     ax[1].legend()
+#     ax[1].set(xlabel = 'Current state COD (log($\cdot$)',
+#               ylabel = '$\hat{\sigma_d}$',
+#               title = 'Variance')
+#     fig.suptitle('Estimators of time distribution COD')
+#     fig.savefig(loc_fig + 'estimator_COD_local.png')
     
     
-    fig, ax = plt.subplots(1, 2, figsize = (15, 5))
+#     fig, ax = plt.subplots(1, 2, figsize = (15, 5))
 
-    im = ax[0].pcolormesh(mu_d_, mu_h_, mu_hat.T, cmap = cm.Blues)
-    plt.colorbar(im, ax=ax[0],label = '$\hat{\mu_d}$')
+#     im = ax[0].pcolormesh(mu_d_, mu_h_, mu_hat.T, cmap = cm.Blues)
+#     plt.colorbar(im, ax=ax[0],label = '$\hat{\mu_d}$')
 
-    im = ax[1].pcolormesh(mu_d_, mu_h_, sigma_hat.T, cmap = cm.Blues)
-    plt.colorbar(im, ax=ax[1],label = '$\hat{\sigma_d}$')
+#     im = ax[1].pcolormesh(mu_d_, mu_h_, sigma_hat.T, cmap = cm.Blues)
+#     plt.colorbar(im, ax=ax[1],label = '$\hat{\sigma_d}$')
 
-    ax[0].set(xlabel = 'Current state COD (log($\cdot$)',
-              ylabel = 'Current state CTH (km)',
-              title = 'Mean')
+#     ax[0].set(xlabel = 'Current state COD (log($\cdot$)',
+#               ylabel = 'Current state CTH (km)',
+#               title = 'Mean')
     
-    ax[1].set(xlabel = 'Current state COD (log($\cdot$)',
-              ylabel = 'Current state CTH (km)',
-              title = 'Variance')
-    fig.suptitle('Estimators of time distribution COD')
-    fig.savefig(loc_fig + 'estimator_COD_local_colormesh.png')
+#     ax[1].set(xlabel = 'Current state COD (log($\cdot$)',
+#               ylabel = 'Current state CTH (km)',
+#               title = 'Variance')
+#     fig.suptitle('Estimators of time distribution COD')
+#     fig.savefig(loc_fig + 'estimator_COD_local_colormesh.png')
     
-# =============================================================================
-#    COD - Overall maximum likelihood
-# =============================================================================
-    fig, ax = plt.subplots(1, 2, figsize = (15, 5))
-    ax[0].plot(mu_d, mu_d, label = 'bin center', c = 'r')
+# # =============================================================================
+# #    COD - Overall maximum likelihood
+# # =============================================================================
+#     fig, ax = plt.subplots(1, 2, figsize = (15, 5))
+#     ax[0].plot(mu_d, mu_d, label = 'bin center', c = 'r')
     
-    for i, c, c_ml, label in zip(range(n_h), color, color_ml, h_labels):
-        if i % 3 == 0:
-            ax[0].plot(mu_d, mu_hat[:,i], label = label, c = c,
-                       # marker = '.', 
-                       # ls = '--'
-                       )
-            # ax[0].plot(mu_d, )
-            ax[1].plot(mu_d, sigma_hat[:,i], label = label, c = c,
-                       # marker = '.', ls = '--'
-                       )
-            mu_ml, sigma_ml = np.array([ml.model1(mu_h[i], d, beta, gamma) for d in mu_d]).T
-            ax[0].plot(mu_d, mu_ml, label = label + ' ml estimator',
-                       c = c_ml)
-            ax[1].plot(mu_d, sigma_ml, label = label + ' ml estimator', c = c_ml)
+#     for i, c, c_ml, label in zip(range(n_h), color, color_ml, h_labels):
+#         if i % 3 == 0:
+#             ax[0].plot(mu_d, mu_hat[:,i], label = label, c = c,
+#                        # marker = '.', 
+#                        # ls = '--'
+#                        )
+#             # ax[0].plot(mu_d, )
+#             ax[1].plot(mu_d, sigma_hat[:,i], label = label, c = c,
+#                        # marker = '.', ls = '--'
+#                        )
+#             mu_ml, sigma_ml = np.array([ml.model1(mu_h[i], d, beta, gamma) for d in mu_d]).T
+#             ax[0].plot(mu_d, mu_ml, label = label + ' ml estimator',
+#                        c = c_ml)
+#             ax[1].plot(mu_d, sigma_ml, label = label + ' ml estimator', c = c_ml)
 
 
-    ax[0].legend()
-    ax[0].set(xlabel = 'Current state COD (log($\cdot$)',
-              ylabel = '$\hat{\mu_d}$',
-              title = 'Mean')
+#     ax[0].legend()
+#     ax[0].set(xlabel = 'Current state COD (log($\cdot$)',
+#               ylabel = '$\hat{\mu_d}$',
+#               title = 'Mean')
     
-    ax[1].legend()
-    ax[1].set(xlabel = 'Current state COD (log($\cdot$)',
-              ylabel = '$\hat{\sigma_d}$',
-              title = 'Variance')
-    fig.suptitle('Estimators of time distribution COD')
-    fig.savefig(loc_fig + 'estimator_COD_ML.png')
+#     ax[1].legend()
+#     ax[1].set(xlabel = 'Current state COD (log($\cdot$)',
+#               ylabel = '$\hat{\sigma_d}$',
+#               title = 'Variance')
+#     fig.suptitle('Estimators of time distribution COD')
+#     fig.savefig(loc_fig + 'estimator_COD_ML.png')
 
 
 # =============================================================================
