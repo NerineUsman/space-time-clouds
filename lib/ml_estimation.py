@@ -55,6 +55,10 @@ def _ll_beta(y, X, alpha1, beta1, alpha2, beta2, p):
 def pdf_bmix(y, alpha1, beta1, alpha2, beta2, p):
     B1 = beta(alpha1, beta1).pdf(y)
     B2 = beta(alpha2, beta2).pdf(y)
+    if p < 0: 
+        p = 0
+    elif p > 1: 
+        p = 1
     H = p * B1 + (1 - p) * B2
     return H
 

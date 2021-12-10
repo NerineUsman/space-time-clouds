@@ -77,8 +77,15 @@ def plot_distribution_next_cloud(df, title = None, nbins = 50, ML = True, **kwar
             x = np.arange(0, 1, dx)
             x_h = ml.UnitInttoCTH(x) * 1e-3
             dx_h = x_h[1] - x_h[0]
+            p = cth_ml_manual.params[-1]
+            if p > 1:
+                p = 1
+            elif p < 0:
+                p = 0
+            cth_ml_manual.params[-1] = p
+                        
             ax[0].plot(x_h,  ml.pdf_bmix(x, *cth_ml_manual.params) * dx / dx_h, 
-                        label = 'Maximum likelihood')
+                        label = f'Maximum likelihood p = {p:.2e}')
             ax[0].legend()
         else:
             print ('bad convergence')
