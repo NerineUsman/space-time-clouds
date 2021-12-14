@@ -7,3 +7,4 @@ end_time      23:59
 dx            50
 dy            50
 loc_fig       ../fig/test/
+loc_model1       ../mod/test/

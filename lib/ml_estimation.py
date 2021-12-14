@@ -49,10 +49,6 @@ class MyDepNormML(GenericLikelihoodModel):
 def _ll_beta_mix(y, X, alpha1, beta1, alpha2, beta2, p):
     B1 = beta(alpha1, beta1).pdf(y)
     B2 = beta(alpha2, beta2).pdf(y)
-    if p < 0: 
-        p = 0
-    elif p > 1: 
-        p = 1
     H = p * B1 + (1 - p) * B2
     return np.log(H).sum()    
 
@@ -79,6 +75,10 @@ class MyMixBetaML(GenericLikelihoodModel):
         alpha1, beta1 = params[:2]
         alpha2, beta2 = params[2:4]
         p = params[4]
+        if p < 0: 
+            p = 0
+        elif p > 1: 
+            p = 1
         ll = _ll_beta_mix(self.endog, self.exog, alpha1, beta1, alpha2, beta2, p)
         return -ll
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
@@ -91,7 +91,7 @@ class MyMixBetaML(GenericLikelihoodModel):
         self.exog_names.append('p')                                    
         if start_params == None:
             # Reasonable starting values
-            start_params = np.append(np.zeros(self.exog.shape[1]), [0.5])
+            start_params = np.array([1,1,1,1,0.5])
         return super(MyMixBetaML, self).fit(start_params=start_params, 
                                   maxiter=maxiter, maxfun=maxfun, 
                                   **kwds)
@@ -125,3 +125,50 @@ class MyBetaML(GenericLikelihoodModel):
                                   **kwds)
     
     
+    
+def _ll_beta_global(y, X, r, rho):
+    y = CTHtoUnitInt(y)
+    h = X[:,0]
+    d = X[:,1]
+    mu = r[0] + r[1] * h
+    lognu = rho[0] + rho[1] * d + (rho[2] + rho[3] * d) * (h - rho[4]) ** 2
+    nu = np.exp(lognu)
+    alpha1 = mu * nu
+    beta1 = nu - alpha1
+    return beta(alpha1, beta1).logpdf(y).sum()    
+
+def model1_cth(h, d, r, rho):
+    mu = r[0] + r[1] * h
+    lognu = rho[0] + rho[1] * d + (rho[2] + rho[3] * d) * (h - rho[4]) ** 2
+    nu = np.exp(lognu)
+    return mu, nu
+    
+
+class MyDepBetaML(GenericLikelihoodModel):
+    """
+    y : cth in m
+    X = [h ,d] : cth and log of cod [m , .]
+    """
+    def __init__(self, endog, exog, **kwds):
+        super(MyDepBetaML, self).__init__(endog, exog, **kwds)
+    def nloglikeobs(self, params):
+        r = params[:2]
+        rho = params[2:7]
+        ll = _ll_beta_global(self.endog, self.exog, r, rho)
+        return -ll
+    def fit(self, start_params=None, maxiter=10000, maxfun=50000, **kwds):
+        # we have one additional parameter and we need to add it for summary
+        self.exog_names.clear()
+        self.exog_names.append('r0')
+        self.exog_names.append('r1')
+        self.exog_names.append('rho0')
+        self.exog_names.append('rho1')
+        self.exog_names.append('rho2')
+        self.exog_names.append('rho3')
+        self.exog_names.append('rho4')
+        if start_params == None:
+            # Reasonable starting values
+            start_params = np.array([0, 1 / 15e3, 1, 1, 1e-6, 1e-6, 8e3])
+        return super(MyDepBetaML, self).fit(start_params=start_params, 
+                                  maxiter=maxiter, maxfun=maxfun, 
+                                  **kwds)
