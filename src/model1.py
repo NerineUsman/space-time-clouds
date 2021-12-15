@@ -95,14 +95,21 @@ def fitMixBetaCTH(y):
     
     if len(h_) > 1e4:
         h_ = h_.sample(int(1e4))
-        
+    
+    mu1 = h_.mean()
+    nu1 = 20
+    mu2 = 1 - mu1
+    nu2 = 20
+    alpha1, beta1, alpha2, beta2 = mu1 * nu1 , nu1 - mu1 * nu1,  mu2 * nu2 , nu2 - mu2 * nu2
+    start_params = [alpha1, beta1, alpha2, beta2, .8 ]
+    
     ml_manual = ml.MyMixBetaML(h_, h_).fit(disp = 0,
-                start_params = [1, 1, 1, 1, .5])
+                start_params = start_params)
     
     params = fixInvalidP(ml_manual.params)
     params = switchBeta(params)
     conv = ml_manual.mle_retvals['converged']
-    return params , conv
+    return params, conv
 
 # main
 if __name__ == "__main__":
@@ -169,7 +176,7 @@ if __name__ == "__main__":
                                                   'bincenter_d',
                                                   'alpha',
                                                   'beta',
-                                                  'conv_b'
+                                                  'conv_b',
                                                   'alpha1',
                                                   'beta1',
                                                   'alpha2',
