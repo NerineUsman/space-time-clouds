@@ -349,30 +349,30 @@ if __name__ == "__main__":
     
     
     
-    print('cod global fit')
-    ## ml estimation COD deep params
-    df_cc['constant'] = 1
-    df_cc['hd'] = df_cc.h_t * df_cc.d_t
-    model1_cod = ml.MyDepNormML(df_cc.d_t_next,df_cc[['constant','h_t', 'd_t', 'hd']])
-    sm_ml_cod = model1_cod.fit(
-                        start_params = [1, .001, 0.9, 0, .7, .001])
-    df_cod = pd.DataFrame(sm_ml_cod._cache)
-    df_cod['coef'] = sm_ml_cod.params
-    df_cod['names'] = model1_cod.exog_names
-    df_cod.to_csv(loc_model1 + 'model1_cod.csv')
+    # print('cod global fit')
+    # ## ml estimation COD deep params
+    # df_cc['constant'] = 1
+    # df_cc['hd'] = df_cc.h_t * df_cc.d_t
+    # model1_cod = ml.MyDepNormML(df_cc.d_t_next,df_cc[['constant','h_t', 'd_t', 'hd']])
+    # sm_ml_cod = model1_cod.fit(
+    #                     start_params = [1, .001, 0.9, 0, .7, .001])
+    # df_cod = pd.DataFrame(sm_ml_cod._cache)
+    # df_cod['coef'] = sm_ml_cod.params
+    # df_cod['names'] = model1_cod.exog_names
+    # df_cod.to_csv(loc_model1 + 'model1_cod.csv')
     
-    print(sm_ml_cod.summary())
+    # print(sm_ml_cod.summary())
     
-    print('cth global fit')
-    ## ml estimation COD deep params
-    model1_cth = ml.MyDepBetaML(df_cc.h_t_next,df_cc[['h_t', 'd_t']])
-    sm_ml_cth = model1_cth.fit()
-    df_cth = pd.DataFrame(sm_ml_cth._cache)
-    df_cth['coef'] = sm_ml_cth.params
-    df_cth['names'] = model1_cth.exog_names
-    df_cth.to_csv(loc_model1 + 'model1_cth.csv')
+    # print('cth global fit')
+    # ## ml estimation COD deep params
+    # model1_cth = ml.MyDepBetaML(df_cc.h_t_next,df_cc[['h_t', 'd_t']])
+    # sm_ml_cth = model1_cth.fit()
+    # df_cth = pd.DataFrame(sm_ml_cth._cache)
+    # df_cth['coef'] = sm_ml_cth.params
+    # df_cth['names'] = model1_cth.exog_names
+    # df_cth.to_csv(loc_model1 + 'model1_cth.csv')
     
-    print(sm_ml_cth.summary())
+    # print(sm_ml_cth.summary())
     
 
     
