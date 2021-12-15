@@ -22,7 +22,7 @@ import ml_estimation as ml
 
 # variables
 src_path = os.path.dirname(os.path.realpath(__file__))
-input_file = src_path + '/input_model1.txt'
+input_file = src_path + '/input_model1_local.txt'
 # input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
@@ -140,11 +140,12 @@ if __name__ == "__main__":
 
     df_sc = df.loc[(df.cloud == 'clear sky') & (df.cloud_next == 'cloud') ]
     df_sc = df_sc.copy()
+    
 # =============================================================================
 #   To clear sky
 # =============================================================================
-    df_s = df.loc[((df.cloud == 'clear sky') | (df.cloud == 'cloud')) & (df.cloud_next == 'clear sky')  ]
 
+    df_s = df.loc[((df.cloud == 'clear sky') | (df.cloud == 'cloud')) & (df.cloud_next == 'clear sky')  ]
     
 # =============================================================================
 #   model1
@@ -348,7 +349,10 @@ if __name__ == "__main__":
     model1_cod = ml.MyDepNormML(df_cc.d_t_next,df_cc[['constant','h_t', 'd_t', 'hd']])
     sm_ml_cod = model1_cod.fit(
                         start_params = [1, .001, 0.9, 0, .7, .001])
-    sm_ml_cod.save(loc_model1 + 'model1_cod.pickle')
+    df_cod = pd.DataFrame(sm_ml_cod._cache)
+    df_cod['coef'] = sm_ml_cod.params
+    df_cod['names'] = model1_cod.exog_names
+    df_cod.to_csv(loc_model1 + 'model1_cod.csv')
     
     print(sm_ml_cod.summary())
     
@@ -356,7 +360,10 @@ if __name__ == "__main__":
     ## ml estimation COD deep params
     model1_cth = ml.MyDepBetaML(df_cc.h_t_next,df_cc[['h_t', 'd_t']])
     sm_ml_cth = model1_cth.fit()
-    sm_ml_cth.save(loc_model1 + 'model1_cth.pickle')
+    df_cth = pd.DataFrame(sm_ml_cth._cache)
+    df_cth['coef'] = sm_ml_cth.params
+    df_cth['names'] = model1_cth.exog_names
+    df_cth.to_csv(loc_model1 + 'model1_cth.csv')
     
     print(sm_ml_cth.summary())
     
