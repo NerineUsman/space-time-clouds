@@ -9,16 +9,11 @@ Created on Wed Dec 15 11:54:44 2021
 
 import pickle
 import pandas as pd
-<<<<<<< HEAD
 import os, sys
 sys.path.insert(0, './space-time-clouds/lib')
 import ml_estimation as ml
 
-#variables
-=======
-import os
 
->>>>>>> edf28b7e56287164e4d98e0aadb62018211e87a6
 src_path = os.path.dirname(os.path.realpath(__file__))
 input_file = src_path + '/input_model1.txt'
 

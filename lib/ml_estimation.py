@@ -55,10 +55,10 @@ def _ll_beta_mix(y, X, alpha1, beta1, alpha2, beta2, p):
 def pdf_bmix(y, alpha1, beta1, alpha2, beta2, p):
     B1 = beta(alpha1, beta1).pdf(y)
     B2 = beta(alpha2, beta2).pdf(y)
-    if p < 0: 
-        p = 0
-    elif p > 1: 
-        p = 1
+    if p <= 0: 
+        return B2
+    elif p >= 1: 
+        return B1
     H = p * B1 + (1 - p) * B2
     return H
 
@@ -172,3 +172,122 @@ class MyDepBetaML(GenericLikelihoodModel):
         return super(MyDepBetaML, self).fit(start_params=start_params, 
                                   maxiter=maxiter, maxfun=maxfun, 
                                   **kwds)
+    
+# =============================================================================
+#     MIX beta global
+# =============================================================================
+    #start param global 
+def mu1_est(h, d):
+    return h / h_max
+
+gamma1 = np.array([5, 2 * np.pi / h_max , 3, .2])
+a = np.array([.8, .02])
+ab = np.array([.9e-4, .3, .5, -.6, -.05, .35, 7e3])
+gamma2 = np.array([-2/5 *1e-7, 3])
+
+def nu1_est(h, d, gamma1 = gamma1):
+    a = gamma1[2] + gamma1[3] *d
+    return (gamma1[0] - a) * np.cos(gamma1[1] * h) + a
+
+
+def prob(h, d, a = a):
+    p = a[0] + a[1] * d
+    p = np.where(p>1, 1, 
+                 np.where(p < 0 , 0 , p))
+    return p
+
+
+def mu2_est(h, d, ab = ab):
+    a = ab[:5]
+    b = ab[5:7]
+    
+    if a[1] + a[4] * d + a[0] * h < b[0]:
+        out = a[1] + a[4] * d + a[0] * h 
+    elif h < b[1]:
+        out = a[2] + a[4] * d + a[0] * h
+    else:
+        out = a[3] - a[4] * d + a[0] * h
+    
+    if out <= 0:
+        out = .001
+    elif out >= 1:
+        out = .999
+    return out
+    
+
+def nu2_est(h, d, gamma2 = gamma2):
+    return gamma2[0] * (h - 7e3) ** 2 + gamma2[1]
+    
+def _ll_mixbeta_global(y, X, gamma1, a, ab, gamma2):
+    y = CTHtoUnitInt(y)
+    h = X[:,0]
+    d = X[:,1]
+    mu1 = mu1_est(h, d)
+    lognu1 = nu1_est(h, d, gamma1 = gamma1)
+    p = prob(h, d, a = a)
+    mu2 = np.array([mu2_est(hi, di, ab = ab) for (hi,di) in zip (h, d)] )
+    lognu2 = nu2_est(h, d, gamma2 = gamma2)
+    
+    
+    
+    nu1 = np.exp(lognu1)
+    alpha1 = mu1 * nu1
+    beta1 = nu1 - alpha1
+    
+    nu2 = np.exp(lognu2)
+    alpha2 = mu2 * nu2
+    beta2 = nu2 - alpha2
+    return _ll_beta_mix(y, X, alpha1, beta1, alpha2, beta2, p)
+
+# def model1_mix_cth(h, d, r, rho):
+#     mu = r[0] + r[1] * h
+#     lognu = rho[0] + rho[1] * d + (rho[2] + rho[3] * d) * (h - rho[4]) ** 2
+#     nu = np.exp(lognu)
+#     return mu, nu
+    
+
+
+class MyDepMixBetaML(GenericLikelihoodModel):
+    """
+    y : cth in m
+    X = [h ,d] : cth and log of cod [m , .]
+    """
+    def __init__(self, endog, exog, **kwds):
+        super(MyDepMixBetaML, self).__init__(endog, exog, **kwds)
+    def nloglikeobs(self, params):
+        gamma1 = params[:4]
+        a = params[4:6]
+        ab = params[6:13]
+        gamma2 = params[13: 15]    
+        print(params)
+        ll = _ll_mixbeta_global(self.endog, self.exog, gamma1, a, ab, gamma2)
+        return -ll
+    def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
+        # we have one additional parameter and we need to add it for summary
+        self.exog_names.clear()
+        self.exog_names.append('gamma10')
+        self.exog_names.append('gamma11')
+        self.exog_names.append('gamma12')
+        self.exog_names.append('gamma13')
+        self.exog_names.append('pa0')
+        self.exog_names.append('pa1')
+        self.exog_names.append('a0')
+        self.exog_names.append('a1')
+        self.exog_names.append('a2')
+        self.exog_names.append('a3')
+        self.exog_names.append('a4')
+        self.exog_names.append('b0')
+        self.exog_names.append('b1')
+        self.exog_names.append('gamma20')
+        self.exog_names.append('gamma21')
+        if start_params == None:
+            # Reasonable starting values
+            start_params = np.concatenate([np.array([5, 2 * np.pi / h_max , 3, .2]),
+                                     np.array([.8, .02]),
+                                     np.array([.9e-4, .3, .5, -.6, -.05, .35, 7e3]),
+                                     np.array([-2/5 *1e-7, 3])])
+        return super(MyDepMixBetaML, self).fit(start_params=start_params, 
+                                  maxiter=maxiter, maxfun=maxfun, 
+                                  **kwds)
+    
+    
