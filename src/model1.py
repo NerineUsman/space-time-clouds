@@ -158,6 +158,35 @@ if __name__ == "__main__":
 #   model1
 # =============================================================================
     
+
+# =============================================================================
+#  Clear sky to cloud
+# =============================================================================
+
+    
+    
+    mu, sigma = fitNormal(df_sc.d_t_next)
+    (alpha, beta), conv_b = fitBetaCTH(df_sc.h_t_next)
+    (alpha1, beta1, alpha2, beta2, p), conv_mb = fitMixBetaCTH(df_sc.h_t_next)
+    
+    dic = { 'alpha' : alpha,
+            'beta' : beta,
+            'conv_b' : conv_b,
+            'alpha1' : alpha1,
+            'beta1' : beta1,
+            'alpha2' : alpha2,
+            'beta2': beta2,
+            'p' : p,
+            'conv_mb' : conv_mb,
+            'mu' : mu,
+            'sigma' : sigma,
+            }
+    
+    df_param_cstc = pd.Series(dic)
+    df_param_cstc.to_csv(loc_model1 + 'cstc_param.csv')
+
+
+
 # =============================================================================
 #   cloud to cloud distribution from a few bins
 # =============================================================================
