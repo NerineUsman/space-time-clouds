@@ -15,6 +15,14 @@ from statsmodels.base.model import GenericLikelihoodModel
 h_max = 15e3 # m , maximum cloud top height TODO check
 
 # functions
+
+def redtoInt(x, a, b):
+    if x < a:
+        x = a
+    elif x> b:
+        x = b
+    return x
+
 def _ll_ols(y, X, beta, gamma):
     mu = X.dot(beta)
     sigma = X[:,:2].dot(gamma)
@@ -178,7 +186,7 @@ class MyDepBetaML(GenericLikelihoodModel):
 # =============================================================================
     #start param global 
 def mu1_est(h, d):
-    return h / h_max
+    return CTHtoUnitInt(h)
 
 gamma1 = np.array([5, 2 * np.pi / h_max , 3, .2])
 a = np.array([.8, .02])
@@ -187,7 +195,7 @@ gamma2 = np.array([-2/5 *1e-7, 3])
 
 def nu1_est(h, d, gamma1 = gamma1):
     a = gamma1[2] + gamma1[3] *d
-    return (gamma1[0] - a) * np.cos(gamma1[1] * h) + a
+    return (gamma1[0] - a) * np.cos(2 * np.pi / h_max * h) + a
 
 
 def prob(h, d, a = a):

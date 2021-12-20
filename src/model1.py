@@ -153,74 +153,87 @@ if __name__ == "__main__":
 # =============================================================================
 
     df_s = df.loc[((df.cloud == 'clear sky') | (df.cloud == 'cloud')) & (df.cloud_next == 'clear sky')  ]
-    
+    df_s = df_s.copy()
 # =============================================================================
 #   model1
 # =============================================================================
     
-# # =============================================================================
-# #   cloud to cloud distribution from a few bins
-# # =============================================================================
-#     print('example bins')
-#     mu_h = [1e3, 6e3, 9e3, 12e3] #
-#     mu_d = [0, 1, 2, 3]
+# =============================================================================
+#   cloud to cloud distribution from a few bins
+# =============================================================================
+    # print('example bins')
+    # mu_h = [1e3, 6e3, 9e3, 12e3] #
+    # mu_d = [0, 1, 2, 3]
     
 
-#     bins, (bincenter_h, bincenter_d) = state_bins(mu_h, mu_d)
+    # bins, (bincenter_h, bincenter_d) = state_bins(mu_h, mu_d)
     
-#     df_example_bins = pd.DataFrame(columns = np.append(df_cc.columns.values,
-#                                                         ['bincenter_h',
-#                                                         'bincenter_d']))
+    # df_example_bins = pd.DataFrame(columns = np.append(df_cc.columns.values,
+    #                                                     ['bincenter_h',
+    #                                                     'bincenter_d']))
     
-#     df_example_bins_fit = pd.DataFrame(columns = ['bincenter_h',
-#                                                   'bincenter_d',
-#                                                   'alpha',
-#                                                   'beta',
-#                                                   'conv_b',
-#                                                   'alpha1',
-#                                                   'beta1',
-#                                                   'alpha2',
-#                                                   'beta2',
-#                                                   'p', 
-#                                                   'conv_mb',
-#                                                   'mu',
-#                                                   'sigma'])
+    # df_example_bins_fit = pd.DataFrame(columns = ['bincenter_h',
+    #                                               'bincenter_d',
+    #                                               'alpha',
+    #                                               'beta',
+    #                                               'conv_b',
+    #                                               'alpha1',
+    #                                               'beta1',
+    #                                               'alpha2',
+    #                                               'beta2',
+    #                                               'p', 
+    #                                               'conv_mb',
+    #                                               'mu',
+    #                                               'sigma',
+    #                                               'p_cs'])
     
-#     for i, b in zip(range(len(bins)), bins):       
-#         print(b)
-#         # filter cloud to cloud on from within bin
-#         df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
-#                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
-#         df_temp = df_temp.copy()
-
-#         if len(df_temp) <= 1:
-#             print('not enough data')
-#             continue
+    # for i, b in zip(range(len(bins)), bins):       
+    #     print(b)
+    #     # filter cloud to cloud on from within bin
+    #     df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
+    #                         & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
+    #     df_temp = df_temp.copy()
+    #     df_s_temp = df_s.loc[(df_s.h_t > b[0][0]) & (df_s.h_t < b[0][1])
+    #                         & (df_s.d_t > b[1][0]) & (df_s.d_t < b[1][1])]
         
-#         df_temp['bincenter_h'] = bincenter_h[i]
-#         df_temp['bincenter_d'] = bincenter_d[i]
+    #     n_c = len(df_temp)
+    #     n_cs = len(df_s_temp)
         
-#         df_example_bins = df_example_bins.append(df_temp)
+    #     if n_c + n_cs > 0:
+    #         p_cs = n_cs / (n_c + n_cs) 
+    #     else:
+    #         p_cs = np.nan
+            
+        # if len(df_temp) <= 1:
+        #     print('not enough data')
+        #     continue
         
-#         mu, sigma = fitNormal(df_temp.d_t_next)
-#         (alpha, beta), conv_b = fitBetaCTH(df_temp.h_t_next)
-#         (alpha1, beta1, alpha2, beta2, p), conv_mb = fitMixBetaCTH(df_temp.h_t_next)
+        # df_temp['bincenter_h'] = bincenter_h[i]
+        # df_temp['bincenter_d'] = bincenter_d[i]
         
-#         dic = {'bincenter_h': bincenter_h[i], 
-#                 'bincenter_d': bincenter_d[i],
-#                 'alpha' : alpha,
-#                 'beta' : beta,
-#                 'conv_b' : conv_b,
-#                 'alpha1' : alpha1,
-#                 'beta1' : beta1,
-#                 'alpha2' : alpha2,
-#                 'beta2': beta2,
-#                 'p' : p,
-#                 'conv_mb' : conv_mb,
-#                 'mu' : mu,
-#                 'sigma' : sigma
-#               }
-#         df_example_bins_fit = df_example_bins_fit.append(dic, ignore_index=True)
+        # df_example_bins = df_example_bins.append(df_temp)
+        
+        # mu, sigma = fitNormal(df_temp.d_t_next)
+        # (alpha, beta), conv_b = fitBetaCTH(df_temp.h_t_next)
+        # (alpha1, beta1, alpha2, beta2, p), conv_mb = fitMixBetaCTH(df_temp.h_t_next)
+        
+        # dic = {'bincenter_h': bincenter_h[i], 
+        #         'bincenter_d': bincenter_d[i],
+        #         'alpha' : alpha,
+        #         'beta' : beta,
+        #         'conv_b' : conv_b,
+        #         'alpha1' : alpha1,
+        #         'beta1' : beta1,
+        #         'alpha2' : alpha2,
+        #         'beta2': beta2,
+        #         'p' : p,
+        #         'conv_mb' : conv_mb,
+        #         'mu' : mu,
+        #         'sigma' : sigma,
+        #         'p_cs' : p_cs
+        #       }
+        
+        # df_example_bins_fit = df_example_bins_fit.append(dic, ignore_index=True)
         
 #     df_example_bins.to_csv(loc_model1 + 'example_bins.csv')
 #     df_example_bins_fit.to_csv(loc_model1 + 'examble_bins_fit.csv')
@@ -363,22 +376,72 @@ if __name__ == "__main__":
     
     # print(sm_ml_cod.summary())
     
-    print('cth global fit')
-    ## ml estimation COD deep params
-    model1_cth = ml.MyDepMixBetaML(df_cc.h_t_next,df_cc[['h_t', 'd_t']])
-    sm_ml_cth = model1_cth.fit()
-    df_cth = pd.DataFrame(sm_ml_cth._cache)
-    df_cth['coef'] = sm_ml_cth.params
-    df_cth['names'] = model1_cth.exog_names
-    df_cth.to_csv(loc_model1 + 'model1_cth.csv')
+    # print('cth global fit')
+    # ## ml estimation COD deep params
+    # model1_cth = ml.MyDepMixBetaML(df_cc.h_t_next,df_cc[['h_t', 'd_t']])
+    # sm_ml_cth = model1_cth.fit()
+    # df_cth = pd.DataFrame(sm_ml_cth._cache)
+    # df_cth['coef'] = sm_ml_cth.params
+    # df_cth['names'] = model1_cth.exog_names
+    # df_cth.to_csv(loc_model1 + 'model1_cth.csv')
     
-    print(sm_ml_cth.summary())
-    
-
-    
+    # print(sm_ml_cth.summary())
     
 
+# =============================================================================
+#     Clear sky probability
+# =============================================================================
+    print('clear sky probability')
+    dh = 300
+    dd = .3
+    mu_h = np.arange(1e3, 14e3, dh) # m
+    mu_d = np.arange(0, 4, dd)
+    n_h = len(mu_h)
+    n_d = len(mu_d)
+    mu_h_ = np.append(mu_h - dh/2, mu_h.max() + dh/2) ## for pcolormesh
+    mu_d_ = np.append(mu_d - dd/2, mu_d.max() + dd/2) ## for pcolormesh
+    
+    bins, bin_center = state_bins(mu_h, mu_d)
+    p_cs = np.zeros((len(mu_h) * len(mu_d)))
+    n_clouds = np.zeros((len(mu_h) *len(mu_d)))
+    
+    
+    for i, b in zip(range(len(bins)), bins):
+        # filter cloud to cloud on from within bin
+        df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
+                            & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])] 
+        df_temp = df_temp.copy()
+        n = len(df_temp)
         
+        df_s_temp = df_s.loc[(df_s.h_t > b[0][0]) & (df_s.h_t < b[0][1])
+                            & (df_s.d_t > b[1][0]) & (df_s.d_t < b[1][1])]
         
-        
+        n_cs = len(df_s_temp)
+        n_clouds[i] = n  + n_cs
+
+        if n + n_cs > 0:
+            p_cs[i] = n_cs / (n + n_cs) 
+        else:
+            p_cs[i] = np.nan
+
+    p_cscs = len(df.loc[(df.cloud == 'clear sky') & (df.cloud_next == 'clear sky')]) / \
+                len (df.loc[df.cloud == 'clear sky'])
+    
+    ds = xr.Dataset(
+    data_vars=dict(
+    ),
+    coords=dict(
+        mu_h=mu_h,
+        mu_d=mu_d,
+    ),
+    attrs=dict(dh = dh, dd = dd,   p_cscs = p_cscs
+    ),
+    )
+    
+    ds['p_cs'] = (['mu_h', 'mu_d'], p_cs.reshape(n_h, n_d))
+    ds['n_bin'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_h, n_d))
+    ds.to_netcdf(loc_model1 + 'p_cs_param_local.nc')
+    
+    
+  
         
