@@ -308,7 +308,7 @@ class MyDepMixBetaML(GenericLikelihoodModel):
 def model1_p_cs(h, d, param = [11e3, .5e-5, .1,  1.2]):
     p =  (np.exp(-1/((h - 7.5e3)/param[0])**2)  -  param[1] * h + param[2] ) * \
         np.exp(-d) * param[3]
-    p = p * (p > 0)
+    p = p * (p > 0) * ( p < 1) + (p > 1)
     return p
 
     

@@ -427,7 +427,7 @@ if __name__ == "__main__":
     dh = 300
     dd = .3
     mu_h = np.arange(1e3, 14e3, dh) # m
-    mu_d = np.arange(-1.5, 4, dd)
+    mu_d = np.arange(-1, 4, dd)
     n_h = len(mu_h)
     n_d = len(mu_d)
     mu_h_ = np.append(mu_h - dh/2, mu_h.max() + dh/2) ## for pcolormesh
