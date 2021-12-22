@@ -22,7 +22,7 @@ import ml_estimation as ml
 
 # variables
 src_path = os.path.dirname(os.path.realpath(__file__))
-input_file = src_path + '/input_model1.txt'
+input_file = src_path + '/input_model1_local.txt'
 # input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
@@ -474,6 +474,24 @@ if __name__ == "__main__":
     ds['n_bin'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_h, n_d))
     ds.to_netcdf(loc_model1 + 'p_cs_param_local.nc')
     
+    ### prob to cs global
     
-  
+    # =============================================================================
+    #   To clear sky
+    # =============================================================================
+
+    df_cs = df.loc[ (df.cloud == 'cloud') & ((df.cloud_next == 'clear sky') | (df.cloud_next == 'cloud')) ]
+    df_cs = df_cs.copy()
+    df_cs['to_clear_sky'] = (df_cs.cloud_next == 'clear sky')
+    
+    print('p_cs global fit')
+    ## ml estimation COD deep params
+    model1_cod = ml.MyDepPcsML(df_cs.to_clear_sky,df_cs[['h_t', 'd_t']])
+    sm_ml_cod = model1_cod.fit()
+    df_cod = pd.DataFrame(sm_ml_cod._cache)
+    df_cod['coef'] = sm_ml_cod.params
+    df_cod['names'] = model1_cod.exog_names
+    df_cod.to_csv(loc_model1 + 'model1_cod.csv')
+    
+    print(sm_ml_cod.summary())
         

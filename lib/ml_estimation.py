@@ -8,7 +8,7 @@ Created on Thu Dec  2 15:09:18 2021
 """
 
 import numpy as np
-from scipy.stats import norm, beta
+from scipy.stats import norm, beta, bernoulli
 from statsmodels.base.model import GenericLikelihoodModel
 
 # variables
@@ -297,6 +297,54 @@ class MyDepMixBetaML(GenericLikelihoodModel):
                                      np.array([.9e-4, .3, .5, -.6, -.05, .35, 7e3]),
                                      np.array([-2/5 *1e-7, 3])])
         return super(MyDepMixBetaML, self).fit(start_params=start_params, 
+                                  maxiter=maxiter, maxfun=maxfun, 
+                                  **kwds)
+    
+    
+# =============================================================================
+#   Cloud to clear sky
+# =============================================================================
+ 
+def model1_p_cs(h, d, param = [11e3, .5e-5, .1,  1.2]):
+    p =  (np.exp(-1/((h - 7.5e3)/param[0])**2)  -  param[1] * h + param[2] ) * \
+        np.exp(-d) * param[3]
+    p = p * (p > 0)
+    return p
+
+    
+def _ll_p_cs_global(y, X, params):
+    h = X[:,0]
+    d = X[:,1]
+    
+    p = model1_p_cs(h, d, params)
+    
+    return bernoulli(p).logpmf(y).sum()  
+
+
+
+class MyDepPcsML(GenericLikelihoodModel):
+    """
+    y : 1, if next state is cs, 0 if next state is cloud
+    X = [h ,d] : cth and log of cod [m , .]
+    """
+    def __init__(self, endog, exog, **kwds):
+        super(MyDepPcsML, self).__init__(endog, exog, **kwds)
+    def nloglikeobs(self, params):
+        print(params)
+        ll = _ll_p_cs_global(self.endog, self.exog, params)
+        return -ll
+    def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
+        # we have one additional parameter and we need to add it for summary
+        self.exog_names.clear()
+        self.exog_names.append('c1')
+        self.exog_names.append('c2')
+        self.exog_names.append('c3')
+        self.exog_names.append('c4')
+
+        if start_params == None:
+            # Reasonable starting values
+            start_params = np.array([11e3, .5e-5, .1,  1.2])
+        return super(MyDepPcsML, self).fit(start_params=start_params, 
                                   maxiter=maxiter, maxfun=maxfun, 
                                   **kwds)
     
