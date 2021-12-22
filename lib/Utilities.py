@@ -14,6 +14,17 @@ import GOES as GOES
 
 # In[2]:
 
+ISCCP_classes = {0 : 'invalid pixel',
+                 1 : 'clear sky',
+                2 : 'cumulus',
+                3 : 'altocumulus',
+                4 : 'cirrus',
+                5 : 'stratocumulus',
+                6 : 'altostratus',
+                7 : 'cirrostratus',
+                8 : 'stratus',
+                9 : 'nimbostratus',
+                10 : 'deep convection'}
 
 def classifyISCCP(cod, cth, dqf_cod, bound = [3.6, 23, 2e3, 8e3]):
     """
@@ -56,7 +67,7 @@ def classifyISCCP(cod, cth, dqf_cod, bound = [3.6, 23, 2e3, 8e3]):
                                )
                       )
              )
-    return ct
+    return ct.astype(int)
 
 def histClassifications(ct, ax = None):
     if ax is None:

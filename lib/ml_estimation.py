@@ -34,6 +34,8 @@ def model1(h, d, beta, gamma):
     sigma = X[:2].dot(gamma)
     return mu, sigma
     
+def pdf_norm(y, mu, sigma):
+    return norm(mu, sigma).pdf(y)
 
 class MyDepNormML(GenericLikelihoodModel):
     def __init__(self, endog, exog, **kwds):
@@ -74,7 +76,7 @@ def CTHtoUnitInt(h):
     return (h + 1) / (h_max + 1.1)
 
 def UnitInttoCTH(h_):
-    return h_ * (h_max + 1.1) - 1
+    return (h_ + .001) * h_max *  .998
 
 class MyMixBetaML(GenericLikelihoodModel):
     def __init__(self, endog, exog, **kwds):

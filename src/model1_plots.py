@@ -18,6 +18,7 @@ from matplotlib.pyplot import cm
 sys.path.insert(0, './space-time-clouds/lib')
 sys.path.insert(0, '../lib')
 import ml_estimation as ml
+import model1 as mod
 
 
 
@@ -73,39 +74,45 @@ def plot_distribution_next_cloud(df,
     
     
     if (ML == True) and (len(df)>= 10):
-        h_ = ml.CTHtoUnitInt(df.h_t_next)
-        if len(h_) > 1e4:
-            h_ = h_.sample(int(1e4))
-            print('decreased sample size')
-        
         dx = .01
         x = np.arange(0, 1, dx)
         x_h = ml.UnitInttoCTH(x) * 1e-3
-        dx_h = x_h[1] - x_h[0]
+        dx_h = x_h[1] - x_h[0]        
         if mixture:
-            cth_ml_manual = ml.MyMixBetaML(h_, h_).fit(
-                        start_params = [1, 1, 1, 1, .5])
-            converged = cth_ml_manual.mle_retvals["converged"]
-            if ~cth_ml_manual.mle_retvals['warnflag']:
-                p = cth_ml_manual.params[-1]
+            param, converged = mod.fitMixBetaCTH(df.h_t_next)
+            print('converged = ', converged)
+            if converged:
+                p = param[-1]
+
                 if p > 1:
                     p = 1
                 elif p < 0:
                     p = 0
-                cth_ml_manual.params[-1] = p
+                param[-1] = p
                             
-                ax[0].plot(x_h,  ml.pdf_bmix(x, *cth_ml_manual.params) * dx / dx_h, 
-                            label = f'Maximum likelihood BetaMix p = {p:.2e}')
+                ax[0].plot(x_h,  ml.pdf_bmix(x, *param) / (ml.h_max * 1e-3), 
+                            label = f'Maximum likelihood BetaMix \np = {p:.2f}\n'
+                            f'$\\alpha_1$ = {param[0]:.2f}\n'\
+                            f'$\\beta_1$ = {param[1]:.2f}\n'\
+                            f'$\\alpha_2$ = {param[2]:.2f}\n'\
+                            f'$\\beta_2$ = {param[3]:.2f}')
                 ax[0].legend()
             else:
                 print ('bad convergence')
+        
         else: 
-            cth_ml_manual = ml.MyBetaML(h_, h_).fit(
-                    start_params = [1, 1])
-            converged = cth_ml_manual.mle_retvals["converged"]
-            ax[0].plot(x_h,  ml.pdf_b(x, *cth_ml_manual.params) * dx / dx_h, 
+            param, converged = mod.fitBetaCTH(df.h_t_next)
+            ax[0].plot(x_h,  ml.pdf_b(x, *param) / dx_h, 
                             label = 'Maximum likelihood Beta')
             ax[0].legend()
+        
+        x_d = np.linspace(*dlim)
+        mu, sigma = mod.fitNormal(df.d_t_next)
+        d_fit = ml.pdf_norm(x_d, mu, sigma)
+        ax[1].plot(x_d, d_fit, label = 'Maximum likelihood Normal \n'\
+                                       f'$\\mu$ = {mu:.2f}\n'\
+                                       f'$\\sigma$ = {sigma:.2f}')
+        ax[1].legend()
     # titles etc.
     ax[0].set_title(f'CTH (km) | converged {converged}')
     ax[0].set_xlim(hlim)

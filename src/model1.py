@@ -87,7 +87,7 @@ def switchBeta(params):
     alpha1, beta1, alpha2, beta2, p = params
     if p < .5:
         alpha1, beta1, alpha2, beta2, p = alpha2, beta2, alpha1, beta1, 1-p
-    return (alpha1, beta1, alpha2, beta2, p)
+    return np.array([alpha1, beta1, alpha2, beta2, p])
 
 
 def fitMixBetaCTH(y):
@@ -95,6 +95,9 @@ def fitMixBetaCTH(y):
     
     if len(h_) > 1e4:
         h_ = h_.sample(int(1e4))
+        print('decreased sample size')
+    print(y.min(), y.max())
+    print(h_.min(), h_.max())
     
     mu1 = h_.mean()
     nu1 = 20
@@ -424,7 +427,7 @@ if __name__ == "__main__":
     dh = 300
     dd = .3
     mu_h = np.arange(1e3, 14e3, dh) # m
-    mu_d = np.arange(0, 4, dd)
+    mu_d = np.arange(-1.5, 4, dd)
     n_h = len(mu_h)
     n_d = len(mu_d)
     mu_h_ = np.append(mu_h - dh/2, mu_h.max() + dh/2) ## for pcolormesh
