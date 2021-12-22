@@ -472,7 +472,7 @@ if __name__ == "__main__":
     
     ds['p_cs'] = (['mu_h', 'mu_d'], p_cs.reshape(n_h, n_d))
     ds['n_bin'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_h, n_d))
-    ds.to_netcdf(loc_model1 + 'p_cs_param_local.nc')
+    ds.to_netcdf(loc_model1 + 'p_cs_param.nc')
     
     ### prob to cs global
     
