@@ -22,7 +22,7 @@ import ml_estimation as ml
 
 # variables
 src_path = os.path.dirname(os.path.realpath(__file__))
-input_file = src_path + '/input_model1_local.txt'
+input_file = src_path + '/input_model1.txt'
 # input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
@@ -491,7 +491,7 @@ if __name__ == "__main__":
     df_cod = pd.DataFrame(sm_ml_cod._cache)
     df_cod['coef'] = sm_ml_cod.params
     df_cod['names'] = model1_cod.exog_names
-    df_cod.to_csv(loc_model1 + 'model1_cod.csv')
+    df_cod.to_csv(loc_model1 + 'model1_p_cs.csv')
     
     print(sm_ml_cod.summary())
         
