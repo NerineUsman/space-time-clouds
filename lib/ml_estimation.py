@@ -12,7 +12,7 @@ from scipy.stats import norm, beta, bernoulli
 from statsmodels.base.model import GenericLikelihoodModel
 
 # variables
-h_max = 15e3 # m , maximum cloud top height TODO check
+h_max = 16e3 # m , maximum cloud top height TODO check
 
 # functions
 

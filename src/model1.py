@@ -12,6 +12,7 @@ import os, sys
 import numpy as np
 import pandas as pd
 import xarray as xr
+import matplotlib.pyplot as plt
 
 sys.path.insert(0, './space-time-clouds/lib')
 sys.path.insert(0, '../lib')
@@ -22,7 +23,7 @@ import ml_estimation as ml
 
 # variables
 src_path = os.path.dirname(os.path.realpath(__file__))
-input_file = src_path + '/input_model1.txt'
+input_file = src_path + '/input_model1_local.txt'
 # input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
@@ -96,8 +97,8 @@ def fitMixBetaCTH(y):
     if len(h_) > 1e4:
         h_ = h_.sample(int(1e4))
         print('decreased sample size')
-    print(y.min(), y.max())
-    print(h_.min(), h_.max())
+    # print(y.min(), y.max())
+    # print(h_.min(), h_.max())
     
     mu1 = h_.mean()
     nu1 = 20
@@ -132,9 +133,21 @@ if __name__ == "__main__":
         df = pd.read_csv(file)   
         dfs.append(df)
     df = pd.concat(dfs)
+    
 # =============================================================================
 #   Clouds
 # =============================================================================
+    print(f'h_max in data is {df[["h_t", "h_t_next"]].max().max():.2f} m')
+    
+    df.loc[df.h_t > ml.h_max , 'h_t'] = ml.h_max
+    df.loc[df.h_t_next > ml.h_max , 'h_t_next'] = ml.h_max
+    
+    print(f'h_max is {df[["h_t", "h_t_next"]].max().max():.2f} m')
+# =============================================================================
+#   from clouds
+# =============================================================================
+    df_cs = df.loc[ (df.cloud == 'cloud') & ((df.cloud_next == 'clear sky') | (df.cloud_next == 'cloud')) ]
+    df_cs = df_cs.copy()
 
 # =============================================================================
 #   Cloud to cloud    
@@ -157,258 +170,98 @@ if __name__ == "__main__":
 
     df_s = df.loc[((df.cloud == 'clear sky') | (df.cloud == 'cloud')) & (df.cloud_next == 'clear sky')  ]
     df_s = df_s.copy()
-# =============================================================================
-#   model1
-# =============================================================================
-    
 
 # =============================================================================
-#  Clear sky to cloud
+#   Model1 Explorative
 # =============================================================================
 
+# =============================================================================
+#  0. Overall
+# =============================================================================
+
+    ds = xr.Dataset(
+    data_vars=dict(
+    ),
+    coords = dict(
+    )
+    )
     
     
+# =============================================================================
+#  1. Clear sky to clear sky
+# =============================================================================
+    p_cscs = len(df.loc[(df.cloud == 'clear sky') & (df.cloud_next == 'clear sky')]) / \
+                len (df.loc[df.cloud == 'clear sky'])
+              
+    ds['theta1'] = (['cs_to_cs'], [p_cscs])
+    ds.theta1.attrs['var_names'] = 'p_cs'
+
+# =============================================================================
+#  2. Cloud to Clear sky
+# =============================================================================
+    
+    df_cs['to_clear_sky'] = (df_cs.cloud_next == 'clear sky')
+    
+    print('2. p_cs global fit')
+    ## ml estimation COD deep params
+    model1_p = ml.MyDepPcsML(df_cs.to_clear_sky,df_cs[['h_t', 'd_t']])
+    sm_ml_p = model1_p.fit()
+    df_p = pd.DataFrame(sm_ml_p._cache)
+    df_p['coef'] = sm_ml_p.params
+    df_p['names'] = model1_p.exog_names
+    df_p.to_csv(loc_model1 + 'model1_p_cs.csv')
+    
+    ds['theta2'] = (['c_to_cs'], sm_ml_p.params)
+    ds.theta2.attrs['var_names'] = model1_p.exog_names
+
+    print(sm_ml_p.summary())
+     
+# =============================================================================
+#  3. clear sky to cloud
+# =============================================================================
+    print('3. clear sky to cloud')
     mu, sigma = fitNormal(df_sc.d_t_next)
     (alpha, beta), conv_b = fitBetaCTH(df_sc.h_t_next)
     (alpha1, beta1, alpha2, beta2, p), conv_mb = fitMixBetaCTH(df_sc.h_t_next)
     
     dic = { 'alpha' : alpha,
             'beta' : beta,
-            'conv_b' : conv_b,
             'alpha1' : alpha1,
             'beta1' : beta1,
             'alpha2' : alpha2,
             'beta2': beta2,
             'p' : p,
-            'conv_mb' : conv_mb,
             'mu' : mu,
             'sigma' : sigma,
+            'conv_b' : conv_b,
+            'conv_mb' : conv_mb,
             }
     
     df_param_cstc = pd.Series(dic)
     df_param_cstc.to_csv(loc_model1 + 'cstc_param.csv')
-
-
-
+    
+    ds['theta3'] = (['cs_to_c'], df_param_cstc.values)
+    ds.theta3.attrs['var_names'] = list(df_param_cstc.index.values)
+    
 # =============================================================================
-#   cloud to cloud distribution from a few bins
+#   4. cloud to cloud 
 # =============================================================================
-    # print('example bins')
-    # mu_h = [1e3, 6e3, 9e3, 12e3] #
-    # mu_d = [0, 1, 2, 3]
-    
 
-    # bins, (bincenter_h, bincenter_d) = state_bins(mu_h, mu_d)
+    print('4. cod global fit')
+    ## ml estimation COD deep params
+    df_cc['constant'] = 1
+    df_cc['hd'] = df_cc.h_t * df_cc.d_t
+    model1_cod = ml.MyDepNormML(df_cc.d_t_next,df_cc[['constant','h_t', 'd_t', 'hd']])
+    sm_ml_cod = model1_cod.fit(
+                        start_params = [1, .001, 0.9, 0, .7, .001])
+    df_cod = pd.DataFrame(sm_ml_cod._cache)
+    df_cod['coef'] = sm_ml_cod.params
+    df_cod['names'] = model1_cod.exog_names
+    df_cod.to_csv(loc_model1 + 'glob_c_to_c_cod.csv')
     
-    # df_example_bins = pd.DataFrame(columns = np.append(df_cc.columns.values,
-    #                                                     ['bincenter_h',
-    #                                                     'bincenter_d']))
+    print(sm_ml_cod.summary())
     
-    # df_example_bins_fit = pd.DataFrame(columns = ['bincenter_h',
-    #                                               'bincenter_d',
-    #                                               'alpha',
-    #                                               'beta',
-    #                                               'conv_b',
-    #                                               'alpha1',
-    #                                               'beta1',
-    #                                               'alpha2',
-    #                                               'beta2',
-    #                                               'p', 
-    #                                               'conv_mb',
-    #                                               'mu',
-    #                                               'sigma',
-    #                                               'p_cs'])
-    
-    # for i, b in zip(range(len(bins)), bins):       
-    #     print(b)
-    #     # filter cloud to cloud on from within bin
-    #     df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
-    #                         & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
-    #     df_temp = df_temp.copy()
-    #     df_s_temp = df_s.loc[(df_s.h_t > b[0][0]) & (df_s.h_t < b[0][1])
-    #                         & (df_s.d_t > b[1][0]) & (df_s.d_t < b[1][1])]
-        
-    #     n_c = len(df_temp)
-    #     n_cs = len(df_s_temp)
-        
-    #     if n_c + n_cs > 0:
-    #         p_cs = n_cs / (n_c + n_cs) 
-    #     else:
-    #         p_cs = np.nan
-            
-        # if len(df_temp) <= 1:
-        #     print('not enough data')
-        #     continue
-        
-        # df_temp['bincenter_h'] = bincenter_h[i]
-        # df_temp['bincenter_d'] = bincenter_d[i]
-        
-        # df_example_bins = df_example_bins.append(df_temp)
-        
-        # mu, sigma = fitNormal(df_temp.d_t_next)
-        # (alpha, beta), conv_b = fitBetaCTH(df_temp.h_t_next)
-        # (alpha1, beta1, alpha2, beta2, p), conv_mb = fitMixBetaCTH(df_temp.h_t_next)
-        
-        # dic = {'bincenter_h': bincenter_h[i], 
-        #         'bincenter_d': bincenter_d[i],
-        #         'alpha' : alpha,
-        #         'beta' : beta,
-        #         'conv_b' : conv_b,
-        #         'alpha1' : alpha1,
-        #         'beta1' : beta1,
-        #         'alpha2' : alpha2,
-        #         'beta2': beta2,
-        #         'p' : p,
-        #         'conv_mb' : conv_mb,
-        #         'mu' : mu,
-        #         'sigma' : sigma,
-        #         'p_cs' : p_cs
-        #       }
-        
-        # df_example_bins_fit = df_example_bins_fit.append(dic, ignore_index=True)
-        
-#     df_example_bins.to_csv(loc_model1 + 'example_bins.csv')
-#     df_example_bins_fit.to_csv(loc_model1 + 'examble_bins_fit.csv')
-    
-    
-# # =============================================================================
-# #   fit for multiple bins
-# # =============================================================================
-
-# ########
-#         ## COD ##
-# ########
-#     print('cod local fits')
-#     # cod estimators normal distribution
-#     dh = 2000
-#     dd = .7
-#     mu_h = np.arange(1e3, 14e3, dh) # m
-#     mu_d = np.arange(0, 4, dd)
-#     n_h = len(mu_h)
-#     n_d = len(mu_d)
-#     mu_h_ = np.append(mu_h - dh/2, mu_h.max() + dh/2) ## for pcolormesh
-#     mu_d_ = np.append(mu_d - dd/2, mu_d.max() + dd/2) ## for pcolormesh
-    
-#     bins, bin_center = state_bins(mu_h, mu_d)
-#     mu_hat = np.zeros((len(mu_h) * len(mu_d)))
-#     sigma_hat = np.zeros((len(mu_h) * len(mu_d)))
-#     n_clouds = np.zeros((len(mu_h) *len(mu_d)))
-    
-    
-#     for i, b in zip(range(len(bins)), bins):
-#         # filter cloud to cloud on from within bin
-#         df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
-#                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])] 
-#         df_temp = df_temp.copy()
-#         n = len(df_temp)
-#         n_clouds[i] = n
-
-#         if n <= 1:
-#             mu_hat[i] = np.nan
-#             sigma_hat[i] = np.nan
-#             continue
-        
-#         mu_hat[i] = df_temp.d_t_next.mean()
-#         sigma_hat[i] = np.sqrt(n / (n-1) * df_temp.d_t_next.var())
-        
-#     ds = xr.Dataset(
-#     data_vars=dict(
-#         # temperature=(["x", "y", "time"], temperature),
-#         # precipitation=(["x", "y", "time"], precipitation),
-#     ),
-#     coords=dict(
-#         # lon=(["x", "y"], lon),
-#         mu_h=mu_h,
-#         mu_d=mu_d,
-#     ),
-#     attrs=dict(dh = dh, dd = dd),
-#     )
-    
-#     ds['mu'] = (['mu_h', 'mu_d'], mu_hat.reshape(n_h, n_d))
-#     ds['sigma'] = (['mu_h', 'mu_d'], sigma_hat.reshape(n_h, n_d))
-#     ds['n'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_h, n_d))
-#     ds.to_netcdf(loc_model1 + 'cod_param_local.nc')
-    
-    
-#     print('cth local fits')
-#     # cth estimators beta and mixed beta distribution 
-#     dh = 500
-#     dd = 1
-#     mu_h = np.arange(1e3, 14e3, dh) # m
-#     mu_d = np.arange(0, 5, dd)
-#     n_h = len(mu_h)
-#     n_d = len(mu_d)
-#     mu_h_ = np.append(mu_h - dh/2, mu_h.max() + dh/2) ## for pcolormesh
-#     mu_d_ = np.append(mu_d - dd/2, mu_d.max() + dd/2) ## for pcolormesh
-    
-#     bins, bin_center = state_bins(mu_h, mu_d)
-#     n_clouds = np.zeros((len(mu_h) *len(mu_d)))
-    
-#     cth_beta_params = np.zeros((n_h * n_d , 7))
-#     cth_conv_flag = np.zeros((n_h * n_d, 2))
-    
-#     for i, b in zip(range(len(bins)), bins):
-#         # filter cloud to cloud on from within bin
-#         df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
-#                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])] 
-#         df_temp = df_temp.copy()
-#         n = len(df_temp)
-#         n_clouds[i] = n
-        
-#         if n <= 9:
-#             cth_beta_params[i] = np.nan
-#             cth_conv_flag[i] = np.nan
-#             continue
-        
-#         print('try_beta_fit')
-        
-#         cth_beta_params[i,:2] , cth_conv_flag[i, 0] = fitBetaCTH(df_temp.h_t_next)
-#         cth_beta_params[i, 2:7], cth_conv_flag[i, 1] = fitMixBetaCTH(df_temp.h_t_next)
-        
-#     ds = xr.Dataset(
-#     data_vars=dict(
-#     ),
-#     coords=dict(
-#         mu_h=mu_h,
-#         mu_d=mu_d,
-#     ),
-#     attrs=dict(dh = dh, dd = dd),
-#     )
-    
-#     param_names = ['alpha', 'beta',
-#                 'alpha1',
-#                   'beta1', 
-#                   'alpha2', 
-#                   'beta2', 
-#                   'p'
-#                   ]
-    
-#     for i, param in zip(range(i), param_names):
-#         ds[param] = (['mu_h', 'mu_d'], cth_beta_params[:,i].reshape(n_h, n_d))
-    
-    
-#     ds['n'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_h, n_d))
-#     ds['conv_b'] = (['mu_h', 'mu_d'], cth_conv_flag[:, 0].reshape(n_h, n_d))
-#     ds['conv_mb'] = (['mu_h', 'mu_d'], cth_conv_flag[:, 1].reshape(n_h, n_d))
-#     ds.to_netcdf(loc_model1 + 'cth_param_local.nc')
-    
-    
-    
-    # print('cod global fit')
-    # ## ml estimation COD deep params
-    # df_cc['constant'] = 1
-    # df_cc['hd'] = df_cc.h_t * df_cc.d_t
-    # model1_cod = ml.MyDepNormML(df_cc.d_t_next,df_cc[['constant','h_t', 'd_t', 'hd']])
-    # sm_ml_cod = model1_cod.fit(
-    #                     start_params = [1, .001, 0.9, 0, .7, .001])
-    # df_cod = pd.DataFrame(sm_ml_cod._cache)
-    # df_cod['coef'] = sm_ml_cod.params
-    # df_cod['names'] = model1_cod.exog_names
-    # df_cod.to_csv(loc_model1 + 'model1_cod.csv')
-    
-    # print(sm_ml_cod.summary())
-    
-    # print('cth global fit')
+    print('4. cth global fit')
     # ## ml estimation COD deep params
     # model1_cth = ml.MyDepMixBetaML(df_cc.h_t_next,df_cc[['h_t', 'd_t']])
     # sm_ml_cth = model1_cth.fit()
@@ -419,79 +272,12 @@ if __name__ == "__main__":
     
     # print(sm_ml_cth.summary())
     
-
-# =============================================================================
-#     Clear sky probability
-# =============================================================================
-    print('clear sky probability')
-    dh = 300
-    dd = .3
-    mu_h = np.arange(1e3, 14e3, dh) # m
-    mu_d = np.arange(-1, 4, dd)
-    n_h = len(mu_h)
-    n_d = len(mu_d)
-    mu_h_ = np.append(mu_h - dh/2, mu_h.max() + dh/2) ## for pcolormesh
-    mu_d_ = np.append(mu_d - dd/2, mu_d.max() + dd/2) ## for pcolormesh
     
-    bins, bin_center = state_bins(mu_h, mu_d)
-    p_cs = np.zeros((len(mu_h) * len(mu_d)))
-    n_clouds = np.zeros((len(mu_h) *len(mu_d)))
+    ## TODO change second ones to cth
     
-    
-    for i, b in zip(range(len(bins)), bins):
-        # filter cloud to cloud on from within bin
-        df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
-                            & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])] 
-        df_temp = df_temp.copy()
-        n = len(df_temp)
+    ds['theta4'] = (['c_to_c'], np.concatenate([sm_ml_cod.params, sm_ml_cod.params]))
+    ds.theta4.attrs['var_names'] = model1_cod.exog_names + model1_cod.exog_names
         
-        df_s_temp = df_s.loc[(df_s.h_t > b[0][0]) & (df_s.h_t < b[0][1])
-                            & (df_s.d_t > b[1][0]) & (df_s.d_t < b[1][1])]
-        
-        n_cs = len(df_s_temp)
-        n_clouds[i] = n  + n_cs
+    ds.to_netcdf(loc_model1 + 'glob_theta.nc')
 
-        if n + n_cs > 0:
-            p_cs[i] = n_cs / (n + n_cs) 
-        else:
-            p_cs[i] = np.nan
-
-    p_cscs = len(df.loc[(df.cloud == 'clear sky') & (df.cloud_next == 'clear sky')]) / \
-                len (df.loc[df.cloud == 'clear sky'])
-    
-    ds = xr.Dataset(
-    data_vars=dict(
-    ),
-    coords=dict(
-        mu_h=mu_h,
-        mu_d=mu_d,
-    ),
-    attrs=dict(dh = dh, dd = dd,   p_cscs = p_cscs
-    ),
-    )
-    
-    ds['p_cs'] = (['mu_h', 'mu_d'], p_cs.reshape(n_h, n_d))
-    ds['n_bin'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_h, n_d))
-    ds.to_netcdf(loc_model1 + 'p_cs_param.nc')
-    
-    ### prob to cs global
-    
-    # =============================================================================
-    #   To clear sky
-    # =============================================================================
-
-    df_cs = df.loc[ (df.cloud == 'cloud') & ((df.cloud_next == 'clear sky') | (df.cloud_next == 'cloud')) ]
-    df_cs = df_cs.copy()
-    df_cs['to_clear_sky'] = (df_cs.cloud_next == 'clear sky')
-    
-    print('p_cs global fit')
-    ## ml estimation COD deep params
-    model1_cod = ml.MyDepPcsML(df_cs.to_clear_sky,df_cs[['h_t', 'd_t']])
-    sm_ml_cod = model1_cod.fit()
-    df_cod = pd.DataFrame(sm_ml_cod._cache)
-    df_cod['coef'] = sm_ml_cod.params
-    df_cod['names'] = model1_cod.exog_names
-    df_cod.to_csv(loc_model1 + 'model1_p_cs.csv')
-    
-    print(sm_ml_cod.summary())
-        
+   
