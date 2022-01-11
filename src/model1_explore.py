@@ -209,6 +209,10 @@ if __name__ == "__main__":
     ds_hist['freq'] = (['h', 'd'], freq)
     ds_hist.to_netcdf(loc_model1 + 'expl_hist_clouds.nc')
 
+
+    T = pd.crosstab(df.cloud, df.cloud_next, rownames=['from'], colnames=[ 'to'], margins = True)
+    T.to_csv(loc_model1 + 'expl_transition_c_cs.csv')
+    
 # =============================================================================
 #  1. Clear sky to clear sky
 # =============================================================================
@@ -259,7 +263,7 @@ if __name__ == "__main__":
     )
     
     ds['p_cs'] = (['mu_h', 'mu_d'], p_cs.reshape(n_d, n_h).T)
-    ds['n_bin'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_d, n_h).T)
+    ds['n_c'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_d, n_h).T)
 
 
 # =============================================================================
@@ -406,7 +410,7 @@ if __name__ == "__main__":
         
     ds['mu'] = (['mu_h', 'mu_d'], mu_hat.reshape(n_d, n_h).T)
     ds['sigma'] = (['mu_h', 'mu_d'], sigma_hat.reshape(n_d, n_h).T)
-    ds['n'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_d, n_h).T)
+    ds['n_cc'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_d, n_h).T)
     
     
     print('cth local fits')
