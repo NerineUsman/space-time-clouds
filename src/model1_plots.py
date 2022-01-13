@@ -14,10 +14,16 @@ import matplotlib as mpl
 import numpy as np
 import pandas as pd
 from matplotlib.pyplot import cm
+from cmcrameri import cm as  cmc
+
+from scipy.stats import norm, beta
+
+
 
 sys.path.insert(0, './space-time-clouds/lib')
 sys.path.insert(0, '../lib')
 import ml_estimation as ml
+import model1_explore as me
 import model1 as mod
 
 
@@ -30,6 +36,271 @@ input_file = src_path + '/input_model1.txt'
 
 hlim = [0, 16] #km
 dlim = [-1.5, 5.1] #log (d)
+
+# =============================================================================
+# Cloud distribution Histograms
+# =============================================================================
+
+def hist2d_f(ax, xedges, yedges, freq, **kwargs):
+    X, Y = np.meshgrid(xedges[:-1], yedges[:-1])
+    h = ax.hist2d(X.flatten(), Y.flatten(), bins = [xedges, yedges], weights = freq.T.flatten(), **kwargs)
+    return h
+
+def hist_f(ax, edges, freq, **kwargs):
+    hist = ax.hist(edges[:-1], bins = edges, weights = freq, **kwargs)
+    return hist
+
+def plotCloudHist_f(dedges, hedges, freq,
+                                 title = None, 
+                                 mixture = False,
+                                 ML = True,
+                                 cmap = cmc.batlow,
+                                 **kwargs):
+    fig, ax = plt.subplots(1,3,figsize = (20, 4))
+    # histograms
+    hist_f(ax[0], hedges * 1e-3, freq.sum(axis = 0), color = cmap(0), **kwargs)
+    hist_f(ax[1], dedges, freq.sum(axis = 1), color = cmap(0), **kwargs)
+    h = hist2d_f(ax[2], dedges, hedges * 1e-3, freq, 
+             cmap= cmap,
+                       norm=mpl.colors.LogNorm(),
+                     **kwargs)
+    
+    # titles etc.
+    ax[0].set_xlabel('CTH (km)')
+    dh = hedges[1] - hedges[0]
+    max_h = (freq.sum(axis = 0) /  (freq.sum(axis = 0).sum() * dh * 1e-3)).max()
+    ax[0].set_ylim([0, max_h + .1])
+    ax[0].set_xlim(hlim)
+    ax[1].set_xlabel('log COD ($\cdot$)')
+    ax[1].set_xlim(dlim)
+    
+    # joint density
+    ax[2].set_xlabel('log COD ($\cdot$)')
+    ax[2].set_ylabel('CTH (km)')
+    ax[2].set_xlim(dlim)
+    ax[2].set_ylim(hlim)
+    plt.colorbar(h[3], ax=ax[2])
+
+    # ax[2].set_colorbar()
+    
+    if title != None:
+        fig.suptitle(title)
+    return fig, ax
+
+
+# =============================================================================
+#  Plot fit distributions
+# =============================================================================
+
+def plotCTHBeta(ax, a, b, n = 50):
+    H = np.linspace(0, ml.h_max, n)
+    H_norm = ml.CTHtoUnitInt(H)
+    h_beta_fit = beta(a, b).pdf(H_norm)
+
+    line = ax.plot(H * 1e-3, h_beta_fit / 15, label = 'Beta', color = 'forestgreen')
+    ax.legend()
+    return line
+
+def plotCTHBetaMix(ax, alpha1, beta1, alpha2, beta2, p, n = 50):
+    H = np.linspace(0, ml.h_max, n)
+    H_norm = ml.CTHtoUnitInt(H)
+    ax.plot(H * 1e-3, ml.pdf_b(H_norm, alpha1, beta1) / 15, '--',
+               color = 'sandybrown', 
+               label = 'Beta_1')
+    ax.plot(H * 1e-3, ml.pdf_b(H_norm, alpha2, beta2) / 15, '-.',
+               color = 'sandybrown',
+               label = 'Beta_2')
+    ax.plot(H * 1e-3, ml.pdf_bmix(H_norm, alpha1, beta1, alpha2, beta2, p) / 15, 
+               color = 'darkorange',
+               label = f'Beta mixture p = {p:.2f}')
+    ax.legend()
+    return ax
+    
+def plotCODNormal(ax, mu, sigma, n = 50):
+    D = np.linspace(-1.5, 5, n)
+    d_fit = norm(mu, sigma).pdf(D)
+    ax.plot(D, d_fit, label = 'Normal', color = 'darkorange')
+    ax.legend()
+    return ax
+
+# =============================================================================
+# Local parameters
+# =============================================================================
+
+def plotLocalParamCth(ax, theta, 
+                      logscale = False,
+#                       n = 5,
+                      cmap = cm.Blues,
+                      **kwargs):
+    """
+    Function to 
+    Parameters
+    ----------
+    ax : An axis-type object to put the figure.
+    theta : xarray.DataArray(data, coords = (mu_h, mu_d))
+        local parameters 
+    logscale : TYPE, optional
+        DESCRIPTION. The default is False.
+    #                       n : TYPE, optional
+        DESCRIPTION. The default is 5.
+    cmap : TYPE, optional
+        DESCRIPTION. The default is cm.Blues.
+    **kwargs : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    ax : TYPE
+        DESCRIPTION.
+
+    """
+        
+#     n_d = len(theta.mu_d) # TODO: implement number of lines to be plotted
+#     ind = np.round(np.linspace(0, n_d, n, endpoint = False))
+#     ind = (ind + np.floor((ind[1] - ind[0])/2)).astype(int)
+#     ind = list(ind)
+#     print(ind)
+    ind = [2,6,10,14]
+    mu_h = theta.mu_h
+    mu_d = theta.mu_d[ind]
+    color = cmap(np.linspace(.2,1, len(ind)))
+    
+    theta = theta.where(mu_d == mu_d, drop = True)
+    for i, c in zip(range(len(ind)), color):
+        ax.scatter(mu_h * 1e-3, theta[:,i],
+               label = f'logCOD = {mu_d[i].data:.1f}',
+               color = c,
+               marker = '*',
+               )
+    ax.set_xlabel('CTH (km)')
+    ax.set_ylabel(theta.name)
+    if logscale:
+        ax.set_yscale('log')
+    ax.legend()
+    return ax
+
+def plotLocalParamCod(ax, theta, 
+                      logscale = False,
+#                       n = 5,
+                      cmap = cm.Blues,
+                      **kwargs):
+    """
+    
+
+    Parameters
+    ----------
+    ax : TYPE
+        DESCRIPTION.
+    theta : TYPE
+        DESCRIPTION.
+    logscale : TYPE, optional
+        DESCRIPTION. The default is False.
+    #                       n : TYPE, optional
+        DESCRIPTION. The default is 5.
+    cmap : TYPE, optional
+        DESCRIPTION. The default is cm.Blues.
+    **kwargs : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    ax : TYPE
+        DESCRIPTION.
+
+    """
+    ind = [0,10,20,30,40]
+    mu_h = theta.mu_h[ind]
+    mu_d = theta.mu_d
+    color = cmap(np.linspace(.2,1, len(ind)))
+    
+    theta = theta.where(mu_h == mu_h, drop = True)
+    for i, c in zip(range(len(ind)), color):
+        ax.scatter(mu_d , theta[i,:],
+               label = f'CTH = {mu_h[i].data * 1e-3:.1f} km',
+               color = c,
+               marker = '*',
+               **kwargs)
+    if logscale:
+        ax.set_yscale('log')
+    ax.set_xlabel('log COD ($\cdot$)')
+    ax.set_ylabel(theta.name)
+    ax.legend()
+    return ax
+
+
+def plotLocalParam2d(ax, theta,
+                     cmap = cmc.batlow,
+                     norm = None,
+                    **kwargs):
+    """
+    
+
+    Parameters
+    ----------
+    ax : TYPE
+        DESCRIPTION.
+    theta : TYPE
+        DESCRIPTION.
+    cmap : TYPE, optional
+        DESCRIPTION. The default is cm.Blues.
+    norm : TYPE, optional
+        DESCRIPTION. The default is None.
+    **kwargs : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    ax : TYPE
+        DESCRIPTION.
+    hist : TYPE
+        DESCRIPTION.
+
+    """
+    theta.coords["mu_h"] = theta.coords["mu_h"] * 1e-3
+    hist = theta.plot(ax = ax, cmap = cmap, norm = norm, **kwargs)
+    ax.set_xlabel('log COD ($\cdot$)')
+    ax.set_ylabel('CTH (km)')
+    return ax, hist
+    
+
+def plotLocalParam(theta, logscale = False, cmapsv = cmc.oslo_r, **kwargs):
+    """
+    
+
+    Parameters
+    ----------
+    theta : TYPE
+        DESCRIPTION.
+    logscale : TYPE, optional
+        DESCRIPTION. The default is False.
+    **kwargs : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    fig : TYPE
+        DESCRIPTION.
+    ax : TYPE
+        DESCRIPTION.
+
+    """
+
+    fig, ax = plt.subplots(1,3, figsize = (20,4))
+
+    plotLocalParamCth(ax[0], theta, logscale = logscale, cmap = cmapsv)
+    plotLocalParamCod(ax[1], theta, logscale = logscale, cmap = cmapsv)
+    if logscale:
+        plotLocalParam2d(ax[2], theta.where(theta >0), norm = mpl.colors.LogNorm(),
+                         **kwargs
+                    )
+    else:
+        plotLocalParam2d(ax[2], theta,
+                     **kwargs
+                    )
+    return fig, ax
+
+
+
 
 # functions
 def state_bins(mu_h, mu_d, delta_h = 300, delta_d =.1):
@@ -58,84 +329,107 @@ def state_bins(mu_h, mu_d, delta_h = 300, delta_d =.1):
     bins = [[[h - delta_h, h + delta_h], [d - delta_d, d + delta_d]] for h,d in zip(mu_h, mu_d)]
     return bins, bincenter
 
-
 def plot_distribution_next_cloud(df, 
                                  title = None, 
                                  nbins = 50, 
                                  mixture = False,
                                  ML = True,
                                  **kwargs):
-    fig, ax = plt.subplots(1,3,figsize = (20, 4))
     # histograms
-    ax[0].hist(df.h_t_next * 1e-3, bins = nbins, **kwargs)
-    ax[1].hist(df.d_t_next, bins = nbins, **kwargs)
-    converged = 'unknown'
-    # ML likelihood fits
+    freq, dedges, hedges = np.histogram2d(df.d_t_next, df.h_t_next, bins = nbins, **kwargs)
+    fig, ax = plotCloudHist_f(dedges, hedges, freq, density = True)
     
-    
-    if (ML == True) and (len(df)>= 10):
-        dx = .01
-        x = np.arange(0, 1, dx)
-        x_h = ml.UnitInttoCTH(x) * 1e-3
-        dx_h = x_h[1] - x_h[0]        
-        if mixture:
-            param, converged = mod.fitMixBetaCTH(df.h_t_next)
-            print('converged = ', converged)
-            if converged:
-                p = param[-1]
-
-                if p > 1:
-                    p = 1
-                elif p < 0:
-                    p = 0
-                param[-1] = p
-                            
-                ax[0].plot(x_h,  ml.pdf_bmix(x, *param) / (ml.h_max * 1e-3), 
-                            label = f'Maximum likelihood BetaMix \np = {p:.2f}\n'
-                            f'$\\alpha_1$ = {param[0]:.2f}\n'\
-                            f'$\\beta_1$ = {param[1]:.2f}\n'\
-                            f'$\\alpha_2$ = {param[2]:.2f}\n'\
-                            f'$\\beta_2$ = {param[3]:.2f}')
-                ax[0].legend()
-            else:
-                print ('bad convergence')
+    if ML:
+        param_norm = me.fitNormal(df.d_t_next)
+        # (alpha, beta), conv_b = fitBetaCTH(df_temp.h_t_next)
+        param_bm, conv_mb = me.fitMixBetaCTH(df.h_t_next)
         
-        else: 
-            param, converged = mod.fitBetaCTH(df.h_t_next)
-            ax[0].plot(x_h,  ml.pdf_b(x, *param) / dx_h, 
-                            label = 'Maximum likelihood Beta')
-            ax[0].legend()
+        # plotCTHBeta(ax[0], *theta[0:2])
+        plotCTHBetaMix(ax[0], *param_bm)
+        plotCODNormal(ax[1], *param_norm)
         
-        x_d = np.linspace(*dlim)
-        mu, sigma = mod.fitNormal(df.d_t_next)
-        d_fit = ml.pdf_norm(x_d, mu, sigma)
-        ax[1].plot(x_d, d_fit, label = 'Maximum likelihood Normal \n'\
-                                       f'$\\mu$ = {mu:.2f}\n'\
-                                       f'$\\sigma$ = {sigma:.2f}')
-        ax[1].legend()
-    # titles etc.
-    ax[0].set_title(f'CTH (km) | converged {converged}')
-    ax[0].set_xlim(hlim)
-    ax[1].set_title('COD (log($\cdot$)')
-    ax[1].set_xlim(dlim)
-    
-    # joint density
-    bins = [nbins, nbins]
-    h = ax[2].hist2d(df.d_t_next, df.h_t_next*1e-3, bins=bins, 
-                     cmap=plt.cm.Blues,
-                       norm=mpl.colors.LogNorm(),
-                     **kwargs)
-    ax[2].set_xlabel('COD (log($\cdot$)')
-    ax[2].set_ylabel('CTH (km)')
-    ax[2].set_xlim(dlim)
-    ax[2].set_ylim(hlim)
-    plt.colorbar(h[3], ax=ax[2])
-
-    # ax[2].set_colorbar()
-    
     if title != None:
         fig.suptitle(title)
+        
     return fig, ax
+
+# def plot_distribution_next_cloud(df, 
+#                                  title = None, 
+#                                  nbins = 50, 
+#                                  mixture = False,
+#                                  ML = True,
+#                                  **kwargs):
+#     fig, ax = plt.subplots(1,3,figsize = (20, 4))
+#     # histograms
+#     ax[0].hist(df.h_t_next * 1e-3, bins = nbins, **kwargs)
+#     ax[1].hist(df.d_t_next, bins = nbins, **kwargs)
+#     converged = 'unknown'
+#     # ML likelihood fits
+    
+    
+#     if (ML == True) and (len(df)>= 10):
+#         dx = .01
+#         x = np.arange(0, 1, dx)
+#         x_h = ml.UnitInttoCTH(x) * 1e-3
+#         dx_h = x_h[1] - x_h[0]        
+#         if mixture:
+#             param, converged = mod.fitMixBetaCTH(df.h_t_next)
+#             print('converged = ', converged)
+#             if converged:
+#                 p = param[-1]
+
+#                 if p > 1:
+#                     p = 1
+#                 elif p < 0:
+#                     p = 0
+#                 param[-1] = p
+                            
+#                 ax[0].plot(x_h,  ml.pdf_bmix(x, *param) / (ml.h_max * 1e-3), 
+#                             label = f'Maximum likelihood BetaMix \np = {p:.2f}\n'
+#                             f'$\\alpha_1$ = {param[0]:.2f}\n'\
+#                             f'$\\beta_1$ = {param[1]:.2f}\n'\
+#                             f'$\\alpha_2$ = {param[2]:.2f}\n'\
+#                             f'$\\beta_2$ = {param[3]:.2f}')
+#                 ax[0].legend()
+#             else:
+#                 print ('bad convergence')
+        
+#         else: 
+#             param, converged = mod.fitBetaCTH(df.h_t_next)
+#             ax[0].plot(x_h,  ml.pdf_b(x, *param) / dx_h, 
+#                             label = 'Maximum likelihood Beta')
+#             ax[0].legend()
+        
+#         x_d = np.linspace(*dlim)
+#         mu, sigma = mod.fitNormal(df.d_t_next)
+#         d_fit = ml.pdf_norm(x_d, mu, sigma)
+#         ax[1].plot(x_d, d_fit, label = 'Maximum likelihood Normal \n'\
+#                                        f'$\\mu$ = {mu:.2f}\n'\
+#                                        f'$\\sigma$ = {sigma:.2f}')
+#         ax[1].legend()
+#     # titles etc.
+#     ax[0].set_title(f'CTH (km) | converged {converged}')
+#     ax[0].set_xlim(hlim)
+#     ax[1].set_title('COD (log($\cdot$)')
+#     ax[1].set_xlim(dlim)
+    
+#     # joint density
+#     bins = [nbins, nbins]
+#     h = ax[2].hist2d(df.d_t_next, df.h_t_next*1e-3, bins=bins, 
+#                      cmap=plt.cm.Blues,
+#                        norm=mpl.colors.LogNorm(),
+#                      **kwargs)
+#     ax[2].set_xlabel('COD (log($\cdot$)')
+#     ax[2].set_ylabel('CTH (km)')
+#     ax[2].set_xlim(dlim)
+#     ax[2].set_ylim(hlim)
+#     plt.colorbar(h[3], ax=ax[2])
+
+#     # ax[2].set_colorbar()
+    
+#     if title != None:
+#         fig.suptitle(title)
+#     return fig, ax
 
 
 

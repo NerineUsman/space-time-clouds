@@ -56,6 +56,15 @@ def state_bins(mu_h, mu_d, delta_h = 300, delta_d =.1):
     bins = [[[h - delta_h, h + delta_h], [d - delta_d, d + delta_d]] for h,d in zip(mu_h, mu_d)]
     return bins, bincenter
 
+
+# =============================================================================
+#  1. clear sky to clear sky
+# =============================================================================
+
+def p_cs_to_cs(df):
+    return  len(df.loc[(df.cloud == 'clear sky') & (df.cloud_next == 'clear sky')]) / \
+                len (df.loc[df.cloud == 'clear sky'])
+
 def fitNormal(y):
     n = len(y)
     mu = y.mean()
@@ -114,6 +123,10 @@ def fitMixBetaCTH(y):
     params = switchBeta(params)
     conv = ml_manual.mle_retvals['converged']
     return params, conv
+
+def meanBeta(alpha, beta):
+    return alpha / (alpha + beta)
+
 
 # main
 if __name__ == "__main__":
@@ -175,8 +188,8 @@ if __name__ == "__main__":
 # =============================================================================
     dh = 300
     dd = .3
-    mu_h = np.arange(1e3, 14e3, dh) # m
-    mu_d = np.arange(-1, 4, dd)
+    mu_h = np.arange(0 + dh/2, ml.h_max - dh/2, dh) # m
+    mu_d = np.arange(-1, 4.5, dd)
     n_h = len(mu_h)
     n_d = len(mu_d)
 
@@ -210,8 +223,8 @@ if __name__ == "__main__":
     ds_hist.to_netcdf(loc_model1 + 'expl_hist_clouds.nc')
 
 
-    T = pd.crosstab(df.cloud, df.cloud_next, rownames=['from'], colnames=[ 'to'], margins = True)
-    T.to_csv(loc_model1 + 'expl_transition_c_cs.csv')
+    T = T_total = pd.crosstab(df.ISCCP, df.ISCCP_next, rownames=['from'], colnames=[ 'to'], normalize = 'index', margins = True)
+    T.to_csv(loc_model1 + 'expl_transition_ctypes.csv')
     
 # =============================================================================
 #  1. Clear sky to clear sky
@@ -248,8 +261,7 @@ if __name__ == "__main__":
             p_cs[i] = np.nan
         
 
-    p_cscs = len(df.loc[(df.cloud == 'clear sky') & (df.cloud_next == 'clear sky')]) / \
-                len (df.loc[df.cloud == 'clear sky'])
+    p_cscs = p_cs_to_cs(df)
     
     ds = xr.Dataset(
     data_vars=dict(
@@ -258,12 +270,13 @@ if __name__ == "__main__":
         mu_h=mu_h,
         mu_d=mu_d,
     ),
-    attrs=dict(dh = dh, dd = dd,   p_cscs = p_cscs
+    attrs=dict(dh = dh, dd = dd,  p_cscs = p_cscs
     ),
     )
     
     ds['p_cs'] = (['mu_h', 'mu_d'], p_cs.reshape(n_d, n_h).T)
     ds['n_c'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_d, n_h).T)
+
 
 
 # =============================================================================
