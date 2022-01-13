@@ -223,7 +223,7 @@ if __name__ == "__main__":
     ds_hist.to_netcdf(loc_model1 + 'expl_hist_clouds.nc')
 
 
-    T = T_total = pd.crosstab(df.ISCCP, df.ISCCP_next, rownames=['from'], colnames=[ 'to'], normalize = 'index', margins = True)
+    T = T_total = pd.crosstab(df.ct, df.ct_next, rownames=['from'], colnames=[ 'to'], normalize = 'index', margins = True)
     T.to_csv(loc_model1 + 'expl_transition_ctypes.csv')
     
 # =============================================================================
