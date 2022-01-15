@@ -43,7 +43,6 @@ def toInt(x, interval):
     return above + below + within
 
 def param_c(h, d, ds, method = 'linear'):
-    ds.interpolate_na(dim = 'mu_h', method = method, fill_value = 'extrapolate')
     return ds.interp(dict(mu_h = h, mu_d=  d), method = method, kwargs={"fill_value": "extrapolate"})
 
 def theta_c_to_cs(h, d, ds, **kwargs):
