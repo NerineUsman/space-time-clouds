@@ -43,7 +43,6 @@ def toInt(x, interval):
     return above + below + within
 
 def param_c(h, d, ds, method = 'linear'):
-    ds.interpolate_na(dim = 'mu_h', method = method, fill_value = 'extrapolate')
     return ds.interp(dict(mu_h = h, mu_d=  d), method = method, kwargs={"fill_value": "extrapolate"})
 
 def theta_c_to_cs(h, d, ds, **kwargs):
@@ -150,6 +149,7 @@ if __name__ == "__main__":
 
     ds_c = xr.open_dataset(loc_mod + 'expl_local_param.nc')
     ds_cs = xr.open_dataset(loc_mod + 'glob_theta.nc')[['theta1', 'theta3']]
+    
     
     
     n = 1000000
