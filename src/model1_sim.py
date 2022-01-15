@@ -152,7 +152,7 @@ if __name__ == "__main__":
     
     
     
-    n = 100
+    n = 10000
     
     mu_h = np.linspace(0, ml.h_max, 60)
     mu_d = np.linspace(-3, 6, 50)
