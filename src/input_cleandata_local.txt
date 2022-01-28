@@ -1,6 +1,0 @@
-loc_data          ../data/raw_data/
-loc_clean_data  ../data/clean_data/
-start_date    02-12-2020
-end_date      03-12-2020
-start_time    16:00
-end_time      16:59

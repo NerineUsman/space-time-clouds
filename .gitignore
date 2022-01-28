@@ -8,6 +8,3 @@ fig/*
 # The input files are different per machine since paths to data differ. 
 src/*.txt
 src/*.txt~
-
-
-src/*
