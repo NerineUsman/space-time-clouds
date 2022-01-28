@@ -5,3 +5,4 @@ start_time    00:00
 end_time      23:59
 loc_fig       ../fig/model1/sim/
 loc_model1    ../mod/model1/sim/
+dx	      15
