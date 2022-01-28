@@ -79,8 +79,14 @@ def fitBetaCTH(y):
         
     ml_manual = ml.MyBetaML(h_, h_).fit(disp = 0,
                 start_params = [1, 1])
-    conv = ml_manual.mle_retvals['converged']
-    return ml_manual.params, conv
+    return ml_manual #.params, conv
+
+def paramsFitBetaCTH(y):
+    fit = fitBetaCTH(y)
+       
+    conv = fit.mle_retvals['converged']
+    return fit.params, conv
+    
 
 def fixInvalidP(params):
     alpha1, beta1, alpha2, beta2, p = params
@@ -119,10 +125,16 @@ def fitMixBetaCTH(y):
     ml_manual = ml.MyMixBetaML(h_, h_).fit(disp = 0,
                 start_params = start_params)
     
-    params = fixInvalidP(ml_manual.params)
+
+    return ml_manual #params, conv
+
+def paramsFitMixBetaCTH(y):
+    fit = fitMixBetaCTH(y)
+    params = fixInvalidP(fit.params)
     params = switchBeta(params)
-    conv = ml_manual.mle_retvals['converged']
+    conv = fit.mle_retvals['converged']
     return params, conv
+    
 
 def meanBeta(alpha, beta):
     return alpha / (alpha + beta)
@@ -223,7 +235,7 @@ if __name__ == "__main__":
     ds_hist.to_netcdf(loc_model1 + 'expl_hist_clouds.nc')
 
 
-    T = T_total = pd.crosstab(df.ISCCP, df.ISCCP_next, rownames=['from'], colnames=[ 'to'], normalize = 'index', margins = True)
+    T = T_total = pd.crosstab(df.ct, df.ct_next, rownames=['from'], colnames=[ 'to'], normalize = 'index', margins = True)
     T.to_csv(loc_model1 + 'expl_transition_ctypes.csv')
     
 # =============================================================================
@@ -365,8 +377,8 @@ if __name__ == "__main__":
         df_example_bins = df_example_bins.append(df_temp)
         
         mu, sigma = fitNormal(df_temp.d_t_next)
-        (alpha, beta), conv_b = fitBetaCTH(df_temp.h_t_next)
-        (alpha1, beta1, alpha2, beta2, p), conv_mb = fitMixBetaCTH(df_temp.h_t_next)
+        (alpha, beta), conv_b = paramsFitBetaCTH(df_temp.h_t_next)
+        (alpha1, beta1, alpha2, beta2, p), conv_mb = paramsFitMixBetaCTH(df_temp.h_t_next)
         
         dic = {'bincenter_h': bincenter_h[i], 
                 'bincenter_d': bincenter_d[i],
@@ -446,8 +458,8 @@ if __name__ == "__main__":
         
         # print('try_beta_fit')
         
-        cth_beta_params[i,:2] , cth_conv_flag[i, 0] = fitBetaCTH(df_temp.h_t_next)
-        cth_beta_params[i, 2:7], cth_conv_flag[i, 1] = fitMixBetaCTH(df_temp.h_t_next)
+        cth_beta_params[i,:2] , cth_conv_flag[i, 0] = paramsFitBetaCTH(df_temp.h_t_next)
+        cth_beta_params[i, 2:7], cth_conv_flag[i, 1] = paramsFitMixBetaCTH(df_temp.h_t_next)
         
     
     param_names = ['alpha', 'beta',
@@ -503,8 +515,8 @@ if __name__ == "__main__":
        
 
     # mu, sigma = fitNormal(df_sc.d_t_next)
-    # (alpha, beta), conv_b = fitBetaCTH(df_sc.h_t_next)
-    # (alpha1, beta1, alpha2, beta2, p), conv_mb = fitMixBetaCTH(df_sc.h_t_next)
+    # (alpha, beta), conv_b = paramsFitBetaCTH(df_sc.h_t_next)
+    # (alpha1, beta1, alpha2, beta2, p), conv_mb = paramsFitMixBetaCTH(df_sc.h_t_next)
     
     # dic = { 'alpha' : alpha,
     #         'beta' : beta,

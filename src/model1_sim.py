@@ -66,6 +66,27 @@ def theta_c_to_c_cod(h, d, ds, **kwargs):
     sigma = toInt(theta.sigma.data, [0, np.inf])
     return (mu, sigma)
 
+def param_model1(x, ds_cs, ds_c):
+    x_is_cs = np.isnan(x).any()
+    if x_is_cs:
+        p_cs = ds_cs.theta1.data[0]
+    else:
+        p_cs = theta_c_to_cs(*x, ds = ds_c, method = 'nearest')
+    
+#     print('x and p_cs', x, p_cs)
+    
+    # to cloud or clear sky
+    if x_is_cs: ## x current is cs
+        cod_param = ds_cs.theta3[7:9].data
+        cth_param = ds_cs.theta3[2:7].data
+
+    else: ## x is cloud:
+        cth_param = theta_c_to_c_cth(*x, ds = ds_c, method = 'nearest')
+        cod_param = theta_c_to_c_cod(*x, ds = ds_c, method = 'nearest')
+#         print(cod_param , cth_param)
+    
+    return p_cs, cod_param, cth_param
+
 # =============================================================================
 #  Simulation
 # =============================================================================
@@ -164,13 +185,13 @@ if __name__ == "__main__":
     df = pd.DataFrame(x, columns = ['h_t', 'd_t'])
     df['cloud'] = df.apply(lambda x : 'cloud' if ~np.isnan(x.h_t) else 'clear sky', axis = 1)
     dqf = df.cloud.apply(lambda x : 6 if x == 'clear sky' else 0)
-    df['ISCCP'] = util.classifyISCCP(df.d_t, df.h_t, dqf , bound = [np.log(3.6), np.log(23), 2e3, 8e3]).astype(int)
+    df['ct'] = util.classifyISCCP(df.d_t, df.h_t, dqf , bound = [np.log(3.6), np.log(23), 2e3, 8e3]).astype(int)
     
     df = df.append({'h_t' : np.nan, 'd_t' : np.nan}, ignore_index = True)
     df['h_t_next'] = np.roll(df.h_t, -1)
     df['d_t_next'] = np.roll(df.d_t, -1)
     df['cloud_next'] = np.roll(df.cloud, -1)
-    df['ISCCP_next'] =  np.roll(df.ISCCP, -1)
+    df['ct_next'] =  np.roll(df.ISCCP, -1)
     df.to_csv(loc_sim_data + f'sim_n={len(df) - 1}.csv')
     df
 

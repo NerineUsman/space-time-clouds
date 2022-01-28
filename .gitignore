@@ -1,2 +1,10 @@
+# data should stay on cluster, model output is contained in the mod folder
 data/*
+
+# Figures are made locally
+fig/*
+
+
+# The input files are different per machine since paths to data differ. 
+src/*.txt
 
