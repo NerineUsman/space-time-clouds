@@ -71,6 +71,17 @@ class MyDepNormML(GenericLikelihoodModel):
                                   maxiter=maxiter, maxfun=maxfun, 
                                   **kwds)
 
+# =============================================================================
+#  Method of moments Single beta
+# =============================================================================
+
+def MoM_sb(x):
+    m1 = x.mean()
+    m2 = (x**2).mean()
+    alpha = m1 * (m1 - m2) /(m2 - m1**2)
+    beta = (m1/m2 - 1) * (alpha +1)
+    return alpha, beta
+
 def _ll_beta_mix(y, X, alpha1, beta1, alpha2, beta2, p):
     B1 = beta(alpha1, beta1).pdf(y)
     B2 = beta(alpha2, beta2).pdf(y)
@@ -80,6 +91,16 @@ def _ll_beta_mix(y, X, alpha1, beta1, alpha2, beta2, p):
 def pdf_bmix(y, alpha1, beta1, alpha2, beta2, p):
     B1 = beta(alpha1, beta1).pdf(y)
     B2 = beta(alpha2, beta2).pdf(y)
+    if p <= 0: 
+        return B2
+    elif p >= 1: 
+        return B1
+    H = p * B1 + (1 - p) * B2
+    return H
+
+def cdf_bmix(y, alpha1, beta1, alpha2, beta2, p):
+    B1 = beta(alpha1, beta1).cdf(y)
+    B2 = beta(alpha2, beta2).cdf(y)
     if p <= 0: 
         return B2
     elif p >= 1: 
@@ -135,6 +156,9 @@ def pdf_b(y, alpha1, beta1):
     B = beta(alpha1, beta1).pdf(y)
     return B
 
+def cdf_b(y, alpha1, beta1):
+    B = beta(alpha1, beta1).cdf(y)
+    return B
 
 class MyBetaML(GenericLikelihoodModel):
     def __init__(self, endog, exog, **kwds):
