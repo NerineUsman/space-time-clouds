@@ -13,10 +13,12 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
+import itertools
 
 sys.path.insert(0, './space-time-clouds/lib')
-sys.path.insert(0, '../lib')
+sys.path.insert(0, '../lib/')
 import ml_estimation as ml
+import test_stat as ts
 
 
 
@@ -198,8 +200,9 @@ if __name__ == "__main__":
 # =============================================================================
 #   Model1 Explorative
 # =============================================================================
-    dh = 300
-    dd = .3
+    dh = 200
+    dd = .2
+
     mu_h = np.arange(0 + dh/2, ml.h_max - dh/2, dh) # m
     mu_d = np.arange(-1, 4.5, dd)
     n_h = len(mu_h)
@@ -281,6 +284,9 @@ if __name__ == "__main__":
     coords=dict(
         mu_h=mu_h,
         mu_d=mu_d,
+        # distr = ['Norm', 'Beta','MixBeta'],
+        method = ['ML', 'MoM'],
+        est = ['coef', 'bse']
     ),
     attrs=dict(dh = dh, dd = dd,  p_cscs = p_cscs
     ),
@@ -325,7 +331,7 @@ if __name__ == "__main__":
 #   4. cloud to cloud distribution from a few bins
 # =============================================================================
 
-    mu_h_e = [1e3, 6e3, 9e3, 12e3] #
+    mu_h_e = [  500.,  4500.,  8500., 12500.] #[1e3, 6e3, 9e3, 12e3] #
     mu_d_e = [0, 1, 2, 3]
     
 
@@ -435,47 +441,111 @@ if __name__ == "__main__":
         
     ds['mu'] = (['mu_h', 'mu_d'], mu_hat.reshape(n_d, n_h).T)
     ds['sigma'] = (['mu_h', 'mu_d'], sigma_hat.reshape(n_d, n_h).T)
-    ds['n_cc'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_d, n_h).T)
+    # ds['n_cc'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_d, n_h).T)
     
-    
+    ds.mu.attrs['method'] = 'ML'
+    ds.sigma.attrs['method'] = 'ML'
+    ds.mu.attrs['distr'] = 'norm'
+    ds.sigma.attrs['distr'] = 'norm'
     print('cth local fits')
 
     
     cth_beta_params = np.zeros((n_h * n_d , 7))
     cth_conv_flag = np.zeros((n_h * n_d, 2))
     
-    for i, b in zip(range(len(bins)), bins):
+    param_names_bmix = ['alpha1',
+                   'beta1', 
+                   'alpha2', 
+                   'beta2', 
+                   'p'
+                  ]
+    
+    
+    for i, param in zip(range(len(param_names_bmix)), param_names_bmix):
+        ds[param] = (['mu_h', 'mu_d', 'est'], np.empty((n_h, n_d, 2)) * np.nan)
+    
+    ds['n_cc'] = (['mu_h', 'mu_d'], np.empty((n_h, n_d)) * np.nan)
+    ds['AIC_bm'] = (['mu_h', 'mu_d'], np.empty((n_h, n_d)) * np.nan)
+    ds['BIC_bm'] = (['mu_h', 'mu_d'], np.empty((n_h, n_d)) * np.nan)
+    ds['KS_bm'] = (['mu_h', 'mu_d'], np.empty((n_h, n_d)) * np.nan)
+    ds['CM_bm'] = (['mu_h', 'mu_d'], np.empty((n_h, n_d)) * np.nan)
+    ds['AD_bm'] = (['mu_h', 'mu_d'], np.empty((n_h, n_d)) * np.nan)
+    ds['conv_bm'] = (['mu_h', 'mu_d'], np.empty((n_h, n_d)) * np.nan)
+    
+    param_names_b = ['alpha', 'beta']
+
+    for i, param in zip(range(len(param_names_b)), param_names_b):
+        ds[param] = (['mu_h', 'mu_d', 'method', 'est'], np.empty((n_h, n_d, 2, 2)) * np.nan)
+    
+    ds['AIC_b'] = (['mu_h', 'mu_d', 'method'], np.empty((n_h, n_d, 2)) * np.nan)
+    ds['BIC_b'] = (['mu_h', 'mu_d', 'method'], np.empty((n_h, n_d, 2)) * np.nan)
+    ds['KS_b'] = (['mu_h', 'mu_d', 'method'], np.empty((n_h, n_d, 2)) * np.nan)
+    ds['CM_b'] = (['mu_h', 'mu_d', 'method'], np.empty((n_h, n_d, 2)) * np.nan)
+    ds['AD_b'] = (['mu_h', 'mu_d', 'method'], np.empty((n_h, n_d, 2)) * np.nan)
+    ds['conv_b'] = (['mu_h', 'mu_d', 'method'], np.empty((n_h, n_d, 2)) * np.nan)
+
+    j = 0
+    
+    # for i, b in zip(range(len(bins)), bins):
+    for h, d in itertools.product(mu_h, mu_d):
         # filter cloud to cloud on from within bin
+        (b,), b_c = state_bins(h, d, delta_h = dh, delta_d = dd)
         df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])] 
         df_temp = df_temp.copy()
         n = len(df_temp)
         
+        ds['n_cc'].loc[dict(mu_h = h, mu_d = d)] = n
+
+        
         if n <= 9:
-            cth_beta_params[i] = np.nan
-            cth_conv_flag[i] = np.nan
+            # cth_beta_params[j] = np.nan
+            # cth_conv_flag[j] = np.nan
             continue
         
         # print('try_beta_fit')
         
-        cth_beta_params[i,:2] , cth_conv_flag[i, 0] = paramsFitBetaCTH(df_temp.h_t_next)
-        cth_beta_params[i, 2:7], cth_conv_flag[i, 1] = paramsFitMixBetaCTH(df_temp.h_t_next)
+        ## Mix Beta ML
+        mix_beta_fit = fitMixBetaCTH(df_temp.h_t_next)
+        x = ml.CTHtoUnitInt(df_temp.h_t_next)
         
-    
-    param_names = ['alpha', 'beta',
-                'alpha1',
-                  'beta1', 
-                  'alpha2', 
-                  'beta2', 
-                  'p'
-                  ]
-    
-    for i, param in zip(range(i), param_names):
-        ds[param] = (['mu_h', 'mu_d'], cth_beta_params[:,i].reshape(n_d, n_h).T)
-    
-    
-    ds['conv_b'] = (['mu_h', 'mu_d'], cth_conv_flag[:, 0].reshape(n_d, n_h).T)
-    ds['conv_mb'] = (['mu_h', 'mu_d'], cth_conv_flag[:, 1].reshape(n_d, n_h).T)
+        for i, param in zip(range(5), param_names_bmix):
+            ds[param].loc[dict(mu_h = h, mu_d = d, est = 'coef')] = mix_beta_fit.params[i]
+            ds[param].loc[dict(mu_h = h, mu_d = d, est = 'bse')] = mix_beta_fit.bse[i]
+            
+        ds['conv_bm'].loc[dict(mu_h = h, mu_d = d)] = mix_beta_fit.mle_retvals['converged']
+        
+        ds['AIC_bm'].loc[dict(mu_h = h, mu_d = d)] = ts.AIC(5, mix_beta_fit.llf)
+        ds['BIC_bm'].loc[dict(mu_h = h, mu_d = d)] = ts.BIC(5, mix_beta_fit.llf, n)
+        ds['KS_bm'].loc[dict(mu_h = h, mu_d = d)] = ts.KS(x, ml.cdf_bmix, args = (mix_beta_fit.params[:])).statistic
+        ds['CM_bm'].loc[dict(mu_h = h, mu_d = d)] = ts.CM(x, ml.cdf_bmix, args = (mix_beta_fit.params[:])).statistic
+        ds['AD_bm'].loc[dict(mu_h = h, mu_d = d)] = ts.AD(x, ml.cdf_bmix, *mix_beta_fit.params)
+
+
+        ## Beta ML
+        beta_fit = fitBetaCTH(df_temp.h_t_next)
+        ## Beta MoM
+        param_mom = ml.MoM_sb(x)
+        
+        for i, param in zip(range(2), param_names_b):
+            ds[param].loc[dict(mu_h = h, mu_d = d, method = 'ML', est = 'coef')] = beta_fit.params[i]
+            ds[param].loc[dict(mu_h = h, mu_d = d, method = 'ML', est = 'bse')] = beta_fit.bse[i]  
+
+            ds[param].loc[dict(mu_h = h, mu_d = d, method = 'MoM')] = param_mom[i]  
+            
+        ds['conv_b'].loc[dict(mu_h = h, mu_d = d, method = 'ML')] = beta_fit.mle_retvals['converged']
+            
+        ds['AIC_b'].loc[dict(mu_h = h, mu_d = d, method = 'ML')] = ts.AIC(2, beta_fit.llf)
+        ds['BIC_b'].loc[dict(mu_h = h, mu_d = d, method = 'ML')] = ts.BIC(2, beta_fit.llf, n)
+        ds['KS_b'].loc[dict(mu_h = h, mu_d = d, method = 'ML')] = ts.KS(x, ml.cdf_b, args = (beta_fit.params[:])).statistic
+        ds['CM_b'].loc[dict(mu_h = h, mu_d = d, method = 'ML')] = ts.CM(x, ml.cdf_b, args = (beta_fit.params[:])).statistic
+        ds['AD_b'].loc[dict(mu_h = h, mu_d = d, method = 'ML')] = ts.AD(x, ml.cdf_b, *beta_fit.params)
+
+        ds['KS_b'].loc[dict(mu_h = h, mu_d = d, method = 'MoM')] = ts.KS(x, ml.cdf_b, args = (param_mom[:])).statistic
+        ds['CM_b'].loc[dict(mu_h = h, mu_d = d, method = 'MoM')] = ts.CM(x, ml.cdf_b, args = (param_mom[:])).statistic
+        ds['AD_b'].loc[dict(mu_h = h, mu_d = d, method = 'MoM')] = ts.AD(x, ml.cdf_b, *param_mom)
+
+        
     ds.to_netcdf(loc_model1 + 'expl_local_param.nc')
     
     
