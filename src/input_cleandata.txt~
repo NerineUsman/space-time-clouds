@@ -1,6 +1,0 @@
-loc_data        /net/labdata/nerine/space-time-clouds/data/raw_data/
-loc_clean_data  /net/labdata/nerine/space-time-clouds/data/clean_data/
-start_date    01-12-2020
-end_date      02-12-2020
-start_time    00:00
-end_time      23:59

@@ -16,12 +16,27 @@ h_max = 16e3 # m , maximum cloud top height TODO check
 
 # functions
 
-def redtoInt(x, a, b):
-    if x < a:
-        x = a
-    elif x> b:
-        x = b
-    return x
+def toInt(x, interval):
+    a, b = interval
+    if np.isinf(b):
+        above = 0
+    else:
+        above = (x > b) * b
+        
+    if np.isinf(a):
+        below = 0
+    else:
+        below = (x < a) * a
+    below = (x < a) * a
+    within = ((a <= x) & ( x<= b)) * x
+    return above + below + within
+
+# def redtoInt(x, a, b): ### Delete better function above
+#     if x < a:
+#         x = a
+#     elif x> b:
+#         x = b
+#     return x
 
 def _ll_ols(y, X, beta, gamma):
     mu = X.dot(beta)
@@ -73,10 +88,16 @@ def pdf_bmix(y, alpha1, beta1, alpha2, beta2, p):
     return H
 
 def CTHtoUnitInt(h):
-    return (h + 1) / (h_max + 1.1)
+    dh = h_max * 1e-3
+    h = toInt(h, (dh, h_max - dh))
+    h = h / h_max
+    return h
 
 def UnitInttoCTH(h_):
-    return (h_ + .001) * h_max *  .998
+    h = h_ * h_max
+    dh = h_max * 1e-3
+    h = toInt(h, (dh, h_max - dh))
+    return h
 
 class MyMixBetaML(GenericLikelihoodModel):
     def __init__(self, endog, exog, **kwds):

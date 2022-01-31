@@ -92,12 +92,12 @@ def plotCloudHist_f(dedges, hedges, freq,
 #  Plot fit distributions
 # =============================================================================
 
-def plotCTHBeta(ax, a, b, n = 50):
+def plotCTHBeta(ax, a, b, n = 50, label = 'Beta', color = 'forestgreen'):
     H = np.linspace(0, ml.h_max, n)
     H_norm = ml.CTHtoUnitInt(H)
     h_beta_fit = beta(a, b).pdf(H_norm)
 
-    line = ax.plot(H * 1e-3, h_beta_fit / 15, label = 'Beta', color = 'forestgreen')
+    line = ax.plot(H * 1e-3, h_beta_fit / 15, label = label, color = color )
     ax.legend()
     return line
 
