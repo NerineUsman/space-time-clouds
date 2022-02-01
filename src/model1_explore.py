@@ -142,13 +142,31 @@ def meanBeta(alpha, beta):
     return alpha / (alpha + beta)
 
 
+def df_temp_at(df, h, d, delta_h, delta_d, N = 500, **kwargs):
+    (b,), b_c = state_bins(h, d, delta_h = delta_h, delta_d = delta_d)
+    
+    df_t = df.loc[(df.h_t > b[0][0]) & (df.h_t < b[0][1])
+                        & (df.d_t > b[1][0]) & (df.d_t < b[1][1])] 
+    df_t= df_t.copy()    
+    df_t.attrs['dH'] = delta_h
+    df_t.attrs['dD'] = delta_d
+
+    if N is None:
+        # print('Nis None')
+        df_t = df_t
+    elif len(df_t) < N:
+        # print(len(df_t), delta_h, delta_d)
+        df_t = df_temp_at(df, h, d, delta_h * 1.5, delta_d * 1.5, N = N, **kwargs)
+    return df_t
+
+
+
 # main
 if __name__ == "__main__":
     with open(input_file) as f:
         input = dict([line.split() for line in f])
     
     loc_model1_data = input['loc_model1_data']
-    loc_fig = input['loc_fig']
     loc_model1 = input['loc_model1']
     
     # combine df's from all days in model 1 data
@@ -202,14 +220,24 @@ if __name__ == "__main__":
 # =============================================================================
     dh = 200
     dd = .2
-
+    
+    dH = 400 
+    dD = .4
+    
+    N = 5000
+    
+    prop = {'dH' : dH, 'dD' : dD, 'N' : N }
+    
+    prop = '_'.join([f'{x}={prop[x]}' for x in prop]).replace('.' ,'_')
+    loc_model1 = loc_model1 + prop
+    
     mu_h = np.arange(0 + dh/2, ml.h_max - dh/2, dh) # m
     mu_d = np.arange(-1, 4.5, dd)
     n_h = len(mu_h)
     n_d = len(mu_d)
 
     
-    bins, bin_center = state_bins(mu_h, mu_d, delta_h = dh/2, delta_d = dd/2)
+    bins, bin_center = state_bins(mu_h, mu_d, delta_h = dH/2, delta_d = dD/2)
     
     
 # =============================================================================
@@ -254,21 +282,30 @@ if __name__ == "__main__":
 
     p_cs = np.zeros((len(mu_h) * len(mu_d)))
     n_clouds = np.zeros((len(mu_h) *len(mu_d)))
+    dH_i = np.zeros((len(mu_h) *len(mu_d)))
+    dD_i = np.zeros((len(mu_h) *len(mu_d)))
     
     
-    for i, b in zip(range(len(bins)), bins):
+    for i, b, (d, h) in zip(range(len(bins)), bins, itertools.product(mu_d, mu_h)):
         # filter cloud to cloud  from within bin
-        df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
-                            & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])] 
+        df_temp = df_temp_at(df_cc, h, d, dH, dD, N = N)
+        
+        df_s_temp = df_temp_at(df_s, h, d, df_temp.attrs['dH'], df_temp.attrs['dD'], N = None)
+     
+        
+        # df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
+        #                     & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])] 
+        
+        # # filter cloud to clear sky  from within bin
+        # df_s_temp = df_s.loc[(df_s.h_t > b[0][0]) & (df_s.h_t < b[0][1])
+        #                     & (df_s.d_t > b[1][0]) & (df_s.d_t < b[1][1])]
+        
         n = len(df_temp)
-        
-        # filter cloud to clear sky  from within bin
-        df_s_temp = df_s.loc[(df_s.h_t > b[0][0]) & (df_s.h_t < b[0][1])
-                            & (df_s.d_t > b[1][0]) & (df_s.d_t < b[1][1])]
-        
         n_cs = len(df_s_temp)
         
         n_clouds[i] = n + n_cs
+        dH_i[i] = df_temp.attrs['dH']
+        dD_i[i] = df_temp.attrs['dD']
 
         if n + n_cs > 0:
             p_cs[i] = n_cs / (n + n_cs) 
@@ -294,6 +331,8 @@ if __name__ == "__main__":
     
     ds['p_cs'] = (['mu_h', 'mu_d'], p_cs.reshape(n_d, n_h).T)
     ds['n_c'] = (['mu_h', 'mu_d'], n_clouds.reshape(n_d, n_h).T)
+    ds['dH'] = (['mu_h', 'mu_d'], dH_i.reshape(n_d, n_h).T)
+    ds['dD'] = (['mu_h', 'mu_d'], dD_i.reshape(n_d, n_h).T)
 
 
 
@@ -356,14 +395,19 @@ if __name__ == "__main__":
                                                   'sigma',
                                                   'p_cs'])
     
-    for i, b in zip(range(len(bins_e)), bins_e):       
+    for i, b, (d, h) in zip(range(len(bins_e)), bins_e, itertools.product(mu_d_e, mu_h_e)):       
         print(b)
         # filter cloud to cloud on from within bin
-        df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
-                            & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
-        df_temp = df_temp.copy()
-        df_s_temp = df_s.loc[(df_s.h_t > b[0][0]) & (df_s.h_t < b[0][1])
-                            & (df_s.d_t > b[1][0]) & (df_s.d_t < b[1][1])]
+        
+        df_temp = df_temp_at(df_cc, h, d, dH, dD, N = N)
+        
+        df_s_temp = df_temp_at(df_s, h, d, df_temp.attrs['dH'], df_temp.attrs['dD'], N = None)
+        
+        # df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
+        #                     & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
+        # df_temp = df_temp.copy()
+        # df_s_temp = df_s.loc[(df_s.h_t > b[0][0]) & (df_s.h_t < b[0][1])
+        #                     & (df_s.d_t > b[1][0]) & (df_s.d_t < b[1][1])]
         
         n_c = len(df_temp)
         n_cs = len(df_s_temp)
@@ -422,10 +466,10 @@ if __name__ == "__main__":
     n_clouds = np.zeros((len(mu_h) *len(mu_d)))
     
     
-    for i, b in zip(range(len(bins)), bins):
+    for i, b, (d, h) in zip(range(len(bins)), bins, itertools.product(mu_d, mu_h)):
         # filter cloud to cloud on from within bin
-        df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
-                            & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])] 
+        df_temp = df_temp_at(df_cc, h, d, dH, dD, N = N)
+                
         df_temp = df_temp.copy()
         n = len(df_temp)
         n_clouds[i] = n
@@ -454,10 +498,10 @@ if __name__ == "__main__":
     cth_conv_flag = np.zeros((n_h * n_d, 2))
     
     param_names_bmix = ['alpha1',
-                   'beta1', 
-                   'alpha2', 
-                   'beta2', 
-                   'p'
+                    'beta1', 
+                    'alpha2', 
+                    'beta2', 
+                    'p'
                   ]
     
     
@@ -489,9 +533,8 @@ if __name__ == "__main__":
     # for i, b in zip(range(len(bins)), bins):
     for h, d in itertools.product(mu_h, mu_d):
         # filter cloud to cloud on from within bin
-        (b,), b_c = state_bins(h, d, delta_h = dh, delta_d = dd)
-        df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
-                            & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])] 
+        df_temp = df_temp_at(df_cc, h, d, dH, dD, N = N)
+
         df_temp = df_temp.copy()
         n = len(df_temp)
         
@@ -547,81 +590,4 @@ if __name__ == "__main__":
 
         
     ds.to_netcdf(loc_model1 + 'expl_local_param.nc')
-    
-    
-    
-    # print('cod global fit')
-    # ## ml estimation COD deep params
-    # df_cc['constant'] = 1
-    # df_cc['hd'] = df_cc.h_t * df_cc.d_t
-    # model1_cod = ml.MyDepNormML(df_cc.d_t_next,df_cc[['constant','h_t', 'd_t', 'hd']])
-    # sm_ml_cod = model1_cod.fit(
-    #                     start_params = [1, .001, 0.9, 0, .7, .001])
-    # df_cod = pd.DataFrame(sm_ml_cod._cache)
-    # df_cod['coef'] = sm_ml_cod.params
-    # df_cod['names'] = model1_cod.exog_names
-    # df_cod.to_csv(loc_model1 + 'glob_c_to_c_cod.csv')
-    
-    # print(sm_ml_cod.summary())
-    
-    # print('cth global fit')
-    # ## ml estimation COD deep params
-    # model1_cth = ml.MyDepMixBetaML(df_cc.h_t_next,df_cc[['h_t', 'd_t']])
-    # sm_ml_cth = model1_cth.fit()
-    # df_cth = pd.DataFrame(sm_ml_cth._cache)
-    # df_cth['coef'] = sm_ml_cth.params
-    # df_cth['names'] = model1_cth.exog_names
-    # df_cth.to_csv(loc_model1 + 'model1_cth.csv')
-    
-    # print(sm_ml_cth.summary())
-    
-
-# =============================================================================
-#     Clear sky probability
-# =============================================================================
-# =============================================================================
-#  3. Clear sky to cloud global
-# =============================================================================
-       
-
-    # mu, sigma = fitNormal(df_sc.d_t_next)
-    # (alpha, beta), conv_b = paramsFitBetaCTH(df_sc.h_t_next)
-    # (alpha1, beta1, alpha2, beta2, p), conv_mb = paramsFitMixBetaCTH(df_sc.h_t_next)
-    
-    # dic = { 'alpha' : alpha,
-    #         'beta' : beta,
-    #         'conv_b' : conv_b,
-    #         'alpha1' : alpha1,
-    #         'beta1' : beta1,
-    #         'alpha2' : alpha2,
-    #         'beta2': beta2,
-    #         'p' : p,
-    #         'conv_mb' : conv_mb,
-    #         'mu' : mu,
-    #         'sigma' : sigma,
-    #         }
-    
-    # df_param_cstc = pd.Series(dic)
-    # df_param_cstc.to_csv(loc_model1 + 'cstc_param.csv')
-    
-    # ### prob to cs global
-    
-    # # =============================================================================
-    # #   To clear sky
-    # # =============================================================================
-
-    # df_cs = df.loc[ (df.cloud == 'cloud') & ((df.cloud_next == 'clear sky') | (df.cloud_next == 'cloud')) ]
-    # df_cs = df_cs.copy()
-    # df_cs['to_clear_sky'] = (df_cs.cloud_next == 'clear sky')
-    
-    # print('p_cs global fit')
-    # ## ml estimation COD deep params
-    # model1_cod = ml.MyDepPcsML(df_cs.to_clear_sky,df_cs[['h_t', 'd_t']])
-    # sm_ml_cod = model1_cod.fit()
-    # df_cod = pd.DataFrame(sm_ml_cod._cache)
-    # df_cod['coef'] = sm_ml_cod.params
-    # df_cod['names'] = model1_cod.exog_names
-    # df_cod.to_csv(loc_model1 + 'model1_p_cs.csv')
-    
-    # print(sm_ml_cod.summary())
         
