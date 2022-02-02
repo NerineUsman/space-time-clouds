@@ -25,7 +25,7 @@ import test_stat as ts
 
 # variables
 src_path = os.path.dirname(os.path.realpath(__file__))
-input_file = src_path + '/input_model1.txt'
+input_file = src_path + '/input_model.txt'
 # input_file = './space-time-clouds/src/input_model1.txt'
 
 hlim = [0, 16] #km
@@ -136,6 +136,15 @@ def paramsFitMixBetaCTH(y):
     params = switchBeta(params)
     conv = fit.mle_retvals['converged']
     return params, conv
+
+def fitMixBetaCTHtoParams(fit):
+    params = fixInvalidP(fit.params)
+    p = params[-1]
+    params = switchBeta(params)
+    bse = fit.bse
+    bse[:-1] = switchBeta(np.hstack([fit.bse[:-1], p]))[:-1]
+    return params, bse
+    
     
 
 def meanBeta(alpha, beta):
@@ -156,7 +165,7 @@ def df_temp_at(df, h, d, delta_h, delta_d, N = 500, **kwargs):
         df_t = df_t
     elif len(df_t) < N:
         # print(len(df_t), delta_h, delta_d)
-        df_t = df_temp_at(df, h, d, delta_h * 1.5, delta_d * 1.5, N = N, **kwargs)
+        df_t = df_temp_at(df, h, d, delta_h + 200, delta_d + .1, N = N, **kwargs)
     return df_t
 
 
@@ -168,6 +177,21 @@ if __name__ == "__main__":
     
     loc_model1_data = input['loc_model1_data']
     loc_model1 = input['loc_model1']
+    
+    
+    dh = 200
+    dd = .2
+    
+    dH = 400 
+    dD = .4
+    
+    N = 5000
+    
+    prop = {'dH' : dH, 'dD' : dD, 'N' : N }
+    
+    prop = '_'.join([f'{x}={prop[x]}' for x in prop]).replace('.' ,'_')
+    loc_model1 = loc_model1 + prop
+    
     
     # combine df's from all days in model 1 data
     files = [loc_model1_data + f for f in os.listdir(loc_model1_data) if (os.path.isfile(os.path.join(loc_model1_data, f)))]
@@ -218,19 +242,7 @@ if __name__ == "__main__":
 # =============================================================================
 #   Model1 Explorative
 # =============================================================================
-    dh = 200
-    dd = .2
-    
-    dH = 400 
-    dD = .4
-    
-    N = 5000
-    
-    prop = {'dH' : dH, 'dD' : dD, 'N' : N }
-    
-    prop = '_'.join([f'{x}={prop[x]}' for x in prop]).replace('.' ,'_')
-    loc_model1 = loc_model1 + prop
-    
+
     mu_h = np.arange(0 + dh/2, ml.h_max - dh/2, dh) # m
     mu_d = np.arange(-1, 4.5, dd)
     n_h = len(mu_h)
@@ -550,11 +562,12 @@ if __name__ == "__main__":
         
         ## Mix Beta ML
         mix_beta_fit = fitMixBetaCTH(df_temp.h_t_next)
+        params, bse = fitMixBetaCTHtoParams(mix_beta_fit)  ## fix such that p >.5
         x = ml.CTHtoUnitInt(df_temp.h_t_next)
         
         for i, param in zip(range(5), param_names_bmix):
-            ds[param].loc[dict(mu_h = h, mu_d = d, est = 'coef')] = mix_beta_fit.params[i]
-            ds[param].loc[dict(mu_h = h, mu_d = d, est = 'bse')] = mix_beta_fit.bse[i]
+            ds[param].loc[dict(mu_h = h, mu_d = d, est = 'coef')] = params[i]
+            ds[param].loc[dict(mu_h = h, mu_d = d, est = 'bse')] = bse[i]
             
         ds['conv_bm'].loc[dict(mu_h = h, mu_d = d)] = mix_beta_fit.mle_retvals['converged']
         

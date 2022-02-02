@@ -1,4 +1,3 @@
-from,clear sky,cloud,All
-clear sky,1453,539,1992
-cloud,539,8566,9105
-All,1992,9105,11097
+version https://git-lfs.github.com/spec/v1
+oid sha256:45b7e50619dbc1990edaebc778acd6f0bfa8b1d407abe08984aed0ed359eb9e8
+size 93

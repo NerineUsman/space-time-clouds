@@ -131,6 +131,7 @@ def plotLocalParamCth(ax, theta,
                       logscale = False,
 #                       n = 5,
                       cmap = cm.Blues,
+                      ind = [2,6,10],#14],
                       **kwargs):
     """
     Function to 
@@ -160,7 +161,6 @@ def plotLocalParamCth(ax, theta,
 #     ind = (ind + np.floor((ind[1] - ind[0])/2)).astype(int)
 #     ind = list(ind)
 #     print(ind)
-    ind = [2,6,10,14]
     mu_h = theta.mu_h
     mu_d = theta.mu_d[ind]
     color = cmap(np.linspace(.2,1, len(ind)))
@@ -208,7 +208,7 @@ def plotLocalParamCod(ax, theta,
         DESCRIPTION.
 
     """
-    ind = [0,10,20,30,40]
+    ind = [0,10]#,20,30,40]
     mu_h = theta.mu_h[ind]
     mu_d = theta.mu_d
     color = cmap(np.linspace(.2,1, len(ind)))
