@@ -28,6 +28,19 @@ src_path = os.path.dirname(os.path.realpath(__file__))
 input_file = src_path + '/input_model.txt'
 
 
+def neighborhood(ds, i, x, y,
+                 n = 1 # neighbor degree
+                 ):
+
+    xlow = max(0, x - n)
+    xupper = min(ds.dims['x'], x + n + 1)
+    
+    ylow = max(0, y - n)
+    yupper = min(ds.dims['y'], y + n + 1)
+    
+    N = (i, slice(xlow, xupper, 1), slice(ylow, yupper, 1))
+    
+    return N
 
 # main
 if __name__ == "__main__":
@@ -169,14 +182,14 @@ if __name__ == "__main__":
                 if i < n_t:
         #             X[(ds.t.size + hoi) * p + i, 2] = p
                     if np.isnan(xloc[i, p]):
-                        X[(n_t + n_nanrows) * p + i, 2] = -10
+                        X[(n_t + n_nanrows) * p + i, 6] = -10
                     else:
                         
                         x = int(xloc[i, p])
-                        y = int(yloc[i, p])
+                        y = int(yloc[i, p])                        
                         
-                        N = (i, slice(x - 1, x + 2, 1), slice(y - 1, y + 2, 1))
-                                               
+                        N = neighborhood(ds, i, x, y)
+                        
                         
                         X[(n_t + n_nanrows) * p + i, 0] = ds.cth[i, x, y ]
                         X[(n_t + n_nanrows) * p + i, 1] = ds.cod[i, x, y ]
@@ -189,9 +202,9 @@ if __name__ == "__main__":
                     X[(n_t + n_nanrows) * p + i, :] = np.nan # add a nan row to seperate different days/pixels
         
         df = pd.DataFrame(X,
-                           columns=['h_t', 'd_t', 'z_t', 'cf_t', 'h_bar_t', 'd_bar_t', 'ct']
+                           columns=['h_t', 'd_t', 'z_t', 'csf_t', 'h_bar_t', 'd_bar_t', 'ct']
                          )
-        
+                
         df = df.drop(df[df.ct == -10].index) # drop rows for pixels that went out of the frame
 
         # combine current state and next state in one row
