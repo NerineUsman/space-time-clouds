@@ -193,6 +193,14 @@ if __name__ == "__main__":
         param_cod = (['mu_h', 'mu_d', 'mu_hN', 'mu_dN', 'mu_csf', 'var_cod'], np.empty((*bin_coord_dim, 2)) * np.nan),
         param_cth_bm = (['mu_h', 'mu_d', 'mu_hN', 'mu_dN', 'mu_csf', 'est', 'var_cth_bm'], np.empty((*bin_coord_dim, 2, 5)) * np.nan),
         param_cth_b = (['mu_h', 'mu_d', 'mu_hN', 'mu_dN', 'mu_csf', 'est', 'method', 'var_cth_b'], np.empty((*bin_coord_dim, 2, 2, 2)) * np.nan),
+        cs_n = (['mu_hN', 'mu_dN', 'mu_csf'], np.empty(bin_coord_dim[2:]) * np.nan), 
+        cs_p_cs = (['mu_hN', 'mu_dN', 'mu_csf'], np.empty(bin_coord_dim[2:]) * np.nan),         
+        cs_freq = (['mu_hN', 'mu_dN', 'mu_csf', 'h_next', 'd_next'], np.empty((*bin_coord_dim[2:], n_bins, n_bins)) * np.nan),
+        cs_hedges = (['mu_hN', 'mu_dN', 'mu_csf', 'bin_edges'], np.empty((*bin_coord_dim[2:], n_bins + 1)) * np.nan),
+        cs_dedges = (['mu_hN', 'mu_dN', 'mu_csf', 'bin_edges'], np.empty((*bin_coord_dim[2:], n_bins + 1)) * np.nan),
+        cs_param_cod = (['mu_hN', 'mu_dN', 'mu_csf', 'var_cod'], np.empty((*bin_coord_dim[2:], 2)) * np.nan),
+        cs_param_cth_bm = (['mu_hN', 'mu_dN', 'mu_csf', 'est', 'var_cth_bm'], np.empty((*bin_coord_dim[2:], 2, 5)) * np.nan),
+        cs_param_cth_b = (['mu_hN', 'mu_dN', 'mu_csf', 'est', 'method', 'var_cth_b'], np.empty((*bin_coord_dim[2:], 2, 2, 2)) * np.nan),
     ),
     coords=dict(
         mu_h=bin_h,
@@ -222,67 +230,86 @@ if __name__ == "__main__":
 #   From clear sky
 # =============================================================================
     
+    bins_iter = itertools.product(bin_hN, bin_dN, bin_csf)
+    n_b = np.product([bin_coord_dim])
     
+    for i, (hN, dN, csf) in zip(range(n_b), bins_iter):   
+        
+        dic = dict(mu_hN = hN,
+                         mu_dN = dN, 
+                         mu_csf = csf
+                         )        
+        
+        df_temp = df.loc[(df.z_t == 1) & 
+                         (hN - dHN <= df.h_bar_t) & (df.h_bar_t <= hN  + dHN) & 
+                         (dN - dDN <= df.d_bar_t) & (df.d_bar_t <= dN  + dDN) & 
+                         (csf - dCSF <= df.csf_t) & (df.csf_t <= csf  + dCSF)  
+                         ].copy()
+        
+        n  = len(df_temp)
+        # to clear sky
+        
+        ds.cs_n.loc[dic] = n
+        
+        if n == 0 : 
+            continue
+        p_cs = len(df_temp.loc[df_temp.z_t_next == 1])/ len(df_temp)
 
-    df_temp = df.loc[df.z_t == 1].copy()
+        ds.cs_p_cs.loc[dic] = p_cs
+        
+        # to cloud
+        
+        # contains histogram of cth, cod and joint from clear sky
     
-    n  = len(df_temp)
-    # to clear sky
-    p_cs = len(df_temp.loc[df_temp.z_t_next == 1])/ len(df_temp)
-    
-    ds['cs_n'] = n
-    ds['cs_p_cs'] = p_cs
-    
-    # to cloud
-    
-    # contains histogram of cth, cod and joint from clear sky
-
-    freq_hd, xedges, yedges, __ = plt.hist2d(df_sc.d_t_next, 
-                                              df_sc.h_t_next, 
-                                              bins = [n_bins, n_bins])
- 
-    ds_hist = xr.Dataset(
-    data_vars=dict(
-    ),
-    coords = dict(
-        dedges = xedges,
-        hedges = yedges
+        freq_hd, xedges, yedges, __ = plt.hist2d(df_sc.d_t_next, 
+                                                  df_sc.h_t_next, 
+                                                  bins = [n_bins, n_bins])
+     
+        ds_hist = xr.Dataset(
+        data_vars=dict(
+        ),
+        coords = dict(
+            dedges = xedges,
+            hedges = yedges
+            )
         )
-    )
-    
-    # save values    
-    ds['cs_freq'] = (['h_next', 'd_next'], freq_hd)
-    ds['cs_dedges'] = (['bin_edges'], xedges)
-    ds['cs_hedges'] = (['bin_edges'], yedges)
-    
-    # fit
-    #   cod
-    df_temp = df_temp.loc[df_temp.z_t_next == 0]
-    d_next = df_temp.d_t_next
-    mu = d_next.mean()
-    sigma = np.sqrt(n /  ( n - 1) * d_next.var())
-    
-    ds['cs_param_cod'] = (['var_cod'], [mu, sigma])
-
-    
-    #   cth
-    if n >= 9:
-        mix_beta_fit = me.fitMixBetaCTH(df_temp.h_t_next)
-        params, bse = me.fitMixBetaCTHtoParams(mix_beta_fit)  ## fix such that p >.5
-        x = ml.CTHtoUnitInt(df_temp.h_t_next)
         
-        ds['cs_param_cth_bm'] = (['est', 'var_cth_bm'], [params, bse])
+        # save values    
+        ds.cs_freq.loc[dic] = freq_hd
+        ds.cs_dedges.loc[dic] = xedges
+        ds.cs_hedges.loc[dic] = yedges
         
-        beta_fit = me.fitBetaCTH(df_temp.h_t_next)
-        ## Beta MoM
-        param_mom = ml.MoM_sb(x)
+        # fit
+        #   cod
+        df_temp = df_temp.loc[df_temp.z_t_next == 0]
         
-        ds['cs_param_cth_b'] = (['est', 'method', 'var_cth_b'], 
-                                [[[beta_fit.params[0], beta_fit.params[1]],
-                                  [param_mom[0], param_mom[1]]],
-                                 [[beta_fit.bse[0], beta_fit.bse[1]],
-                                  [np.nan, np.nan]]])
-                
+        if len(df_temp) < 2:
+            continue
+        
+        d_next = df_temp.d_t_next
+        mu = d_next.mean()
+        sigma = np.sqrt(n /  ( n - 1) * d_next.var())
+        
+        ds.cs_param_cod.loc[dic] = [mu, sigma]
+    
+        
+        #   cth
+        if n >= 9:
+            mix_beta_fit = me.fitMixBetaCTH(df_temp.h_t_next)
+            params, bse = me.fitMixBetaCTHtoParams(mix_beta_fit)  ## fix such that p >.5
+            x = ml.CTHtoUnitInt(df_temp.h_t_next)
+            
+            ds.cs_param_cth_bm.loc[dic] =  [params, bse]
+            
+            beta_fit = me.fitBetaCTH(df_temp.h_t_next)
+            ## Beta MoM
+            param_mom = ml.MoM_sb(x)
+            
+            ds.cs_param_cth_b.loc[dic] = [[[beta_fit.params[0], beta_fit.params[1]],
+                                      [param_mom[0], param_mom[1]]],
+                                     [[beta_fit.bse[0], beta_fit.bse[1]],
+                                      [np.nan, np.nan]]]
+                    
 
     # n, freq_hd, hedges, dedges, p_cs, param_cod, param_b, param_bm
 
@@ -294,7 +321,6 @@ if __name__ == "__main__":
     n_b = np.product([bin_coord_dim])
     
     for i, (h, d, hN, dN, csf) in zip(range(n_b), bins_iter):   
-        
         dic = dict(mu_h = h,
                          mu_d = d, 
                          mu_hN = hN,
@@ -370,7 +396,7 @@ if __name__ == "__main__":
 
 
 ## maybe also add test statistics
-a    
+  
     
 # # # =============================================================================
 # # #  4. fit for multiple bins
