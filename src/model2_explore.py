@@ -294,22 +294,23 @@ if __name__ == "__main__":
     
         
         #   cth
-        if n >= 9:
-            mix_beta_fit = me.fitMixBetaCTH(df_temp.h_t_next)
-            params, bse = me.fitMixBetaCTHtoParams(mix_beta_fit)  ## fix such that p >.5
-            x = ml.CTHtoUnitInt(df_temp.h_t_next)
-            
-            ds.cs_param_cth_bm.loc[dic] =  [params, bse]
-            
-            beta_fit = me.fitBetaCTH(df_temp.h_t_next)
-            ## Beta MoM
-            param_mom = ml.MoM_sb(x)
-            
-            ds.cs_param_cth_b.loc[dic] = [[[beta_fit.params[0], beta_fit.params[1]],
-                                      [param_mom[0], param_mom[1]]],
-                                     [[beta_fit.bse[0], beta_fit.bse[1]],
-                                      [np.nan, np.nan]]]
-                    
+        if len(df_temp) < 9:
+            continue
+        mix_beta_fit = me.fitMixBetaCTH(df_temp.h_t_next)
+        params, bse = me.fitMixBetaCTHtoParams(mix_beta_fit)  ## fix such that p >.5
+        x = ml.CTHtoUnitInt(df_temp.h_t_next)
+        
+        ds.cs_param_cth_bm.loc[dic] =  [params, bse]
+        
+        beta_fit = me.fitBetaCTH(df_temp.h_t_next)
+        ## Beta MoM
+        param_mom = ml.MoM_sb(x)
+        
+        ds.cs_param_cth_b.loc[dic] = [[[beta_fit.params[0], beta_fit.params[1]],
+                                  [param_mom[0], param_mom[1]]],
+                                 [[beta_fit.bse[0], beta_fit.bse[1]],
+                                  [np.nan, np.nan]]]
+                
 
     # n, freq_hd, hedges, dedges, p_cs, param_cod, param_b, param_bm
 
@@ -331,8 +332,8 @@ if __name__ == "__main__":
         df_temp = df.loc[(df.z_t == 0) & 
                          (h - dH <= df.h_t) & (df.h_t <= h  + dH) & 
                          (d - dD <= df.d_t) & (df.d_t <= d  + dD) & 
-                         (hN - dHN <= df.h_bar_t) & (df.h_bar_t <= hN  + dHN) & 
-                         (dN - dDN <= df.d_bar_t) & (df.d_bar_t <= dN  + dDN) & 
+                         (hN - dHN <= (df.h_bar_t - df.h_t)) & ((df.h_bar_t - df.h_t) <= hN  + dHN) & 
+                         (dN - dDN <= (df.d_bar_t - df.d_t)) & ((df.d_bar_t - df.d_t) <= dN  + dDN) & 
                          (csf - dCSF <= df.csf_t) & (df.csf_t <= csf  + dCSF)  
                          ].copy()
         
@@ -361,10 +362,13 @@ if __name__ == "__main__":
         ds.hedges.loc[dic] = yedges
         
         # fit
-        if n < 2:
-            continue        
+  
         #   cod
         df_temp = df_temp.loc[df_temp.z_t_next == 0]
+        
+        if len(df_temp) < 2:
+            continue
+
         d_next = df_temp.d_t_next
         mu = d_next.mean()
         sigma = np.sqrt(n /  ( n - 1) * d_next.var())
@@ -373,9 +377,8 @@ if __name__ == "__main__":
         
         
         # #   cth
-        if n < 9: 
+        if len(df_temp) < 9:
             continue
-        
         mix_beta_fit = me.fitMixBetaCTH(df_temp.h_t_next)
         params, bse = me.fitMixBetaCTHtoParams(mix_beta_fit)  ## fix such that p >.5
         x = ml.CTHtoUnitInt(df_temp.h_t_next)
