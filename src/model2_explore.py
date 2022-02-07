@@ -114,20 +114,25 @@ if __name__ == "__main__":
 # =============================================================================
 
     bin_h = cs_bin_hN = [1000, 7000, 13000] # m
+
     bin_d = cs_bin_dN = [ -.5, 1.5, 3.5]
     bin_hN = [-1500, -750, 0 , 750, 1500]
     bin_dN = [-.8, -.4, 0, .4, .8]
     bin_csf = [.2, .5, .8]
-        
+    
+    cs_bin_hN = [1000, 4000, 7000, 10000, 13000]
+    cs_bin_dN = [ -.5, .5, 1.5, 2.5, 3.5]    
     
     n_h = len(bin_h)
     n_d = len(bin_d)
     n_hN = len(bin_hN)
     n_dN = len(bin_dN)
     n_csf = len(bin_csf)
+    n_cs_hN = len(cs_bin_hN)
+    n_cs_dN = len(cs_bin_dN)
         
     bin_coord_dim = (n_h, n_d, n_hN, n_dN, n_csf)    
-    cs_bin_coord_dim = (n_h, n_d, n_csf)
+    cs_bin_coord_dim = (n_cs_hN, n_cs_dN, n_csf)
     
     
 # =============================================================================

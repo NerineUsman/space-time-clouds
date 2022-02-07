@@ -101,25 +101,37 @@ def plotCTHBeta(ax, a, b, n = 50, label = 'Beta', color = 'forestgreen'):
     ax.legend()
     return line
 
-def plotCTHBetaMix(ax, alpha1, beta1, alpha2, beta2, p, n = 50):
+def plotCTHBetaMix(ax, alpha1, beta1, alpha2, beta2, p, n = 50,
+                   mainlabel = None, 
+                   maincolor = 'darkorange',
+                   plotSubBeta = True, 
+                   **kwargs):
+    
+    if mainlabel == None:
+        mainlabel = f'Beta mixture p = {p:.2f}'
+        
     H = np.linspace(0, ml.h_max, n)
     H_norm = ml.CTHtoUnitInt(H)
-    ax.plot(H * 1e-3, ml.pdf_b(H_norm, alpha1, beta1) / 15, '--',
-               color = 'sandybrown', 
-               label = 'Beta_1')
-    ax.plot(H * 1e-3, ml.pdf_b(H_norm, alpha2, beta2) / 15, '-.',
-               color = 'sandybrown',
-               label = 'Beta_2')
+    
+    if plotSubBeta:
+        ax.plot(H * 1e-3, ml.pdf_b(H_norm, alpha1, beta1) / 15, '--',
+                   color = 'sandybrown', 
+                   label = 'Beta_1')
+        ax.plot(H * 1e-3, ml.pdf_b(H_norm, alpha2, beta2) / 15, '-.',
+                   color = 'sandybrown',
+                   label = 'Beta_2')
+        
     ax.plot(H * 1e-3, ml.pdf_bmix(H_norm, alpha1, beta1, alpha2, beta2, p) / 15, 
-               color = 'darkorange',
-               label = f'Beta mixture p = {p:.2f}')
+               color = maincolor,
+               label = mainlabel, 
+               **kwargs)
     ax.legend()
     return ax
     
-def plotCODNormal(ax, mu, sigma, n = 50):
+def plotCODNormal(ax, mu, sigma, n = 50, label = 'Normal', color = 'darkorange', **kwargs):
     D = np.linspace(-1.5, 5, n)
     d_fit = norm(mu, sigma).pdf(D)
-    ax.plot(D, d_fit, label = 'Normal', color = 'darkorange')
+    ax.plot(D, d_fit, label = label, color = color, **kwargs)
     ax.legend()
     return ax
 
