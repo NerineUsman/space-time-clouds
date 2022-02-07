@@ -113,8 +113,8 @@ if __name__ == "__main__":
 #   Model1 Explorative
 # =============================================================================
 
-    bin_h = [1000, 7000, 13000] # m
-    bin_d = [ -.5, 1.5, 3.5]
+    bin_h = cs_bin_hN = [1000, 7000, 13000] # m
+    bin_d = cs_bin_dN = [ -.5, 1.5, 3.5]
     bin_hN = [-1500, -750, 0 , 750, 1500]
     bin_dN = [-.8, -.4, 0, .4, .8]
     bin_csf = [.2, .5, .8]
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     n_csf = len(bin_csf)
         
     bin_coord_dim = (n_h, n_d, n_hN, n_dN, n_csf)    
-
+    cs_bin_coord_dim = (n_h, n_d, n_csf)
     
     
 # =============================================================================
@@ -193,20 +193,22 @@ if __name__ == "__main__":
         param_cod = (['mu_h', 'mu_d', 'mu_hN', 'mu_dN', 'mu_csf', 'var_cod'], np.empty((*bin_coord_dim, 2)) * np.nan),
         param_cth_bm = (['mu_h', 'mu_d', 'mu_hN', 'mu_dN', 'mu_csf', 'est', 'var_cth_bm'], np.empty((*bin_coord_dim, 2, 5)) * np.nan),
         param_cth_b = (['mu_h', 'mu_d', 'mu_hN', 'mu_dN', 'mu_csf', 'est', 'method', 'var_cth_b'], np.empty((*bin_coord_dim, 2, 2, 2)) * np.nan),
-        cs_n = (['mu_hN', 'mu_dN', 'mu_csf'], np.empty(bin_coord_dim[2:]) * np.nan), 
-        cs_p_cs = (['mu_hN', 'mu_dN', 'mu_csf'], np.empty(bin_coord_dim[2:]) * np.nan),         
-        cs_freq = (['mu_hN', 'mu_dN', 'mu_csf', 'h_next', 'd_next'], np.empty((*bin_coord_dim[2:], n_bins, n_bins)) * np.nan),
-        cs_hedges = (['mu_hN', 'mu_dN', 'mu_csf', 'bin_edges'], np.empty((*bin_coord_dim[2:], n_bins + 1)) * np.nan),
-        cs_dedges = (['mu_hN', 'mu_dN', 'mu_csf', 'bin_edges'], np.empty((*bin_coord_dim[2:], n_bins + 1)) * np.nan),
-        cs_param_cod = (['mu_hN', 'mu_dN', 'mu_csf', 'var_cod'], np.empty((*bin_coord_dim[2:], 2)) * np.nan),
-        cs_param_cth_bm = (['mu_hN', 'mu_dN', 'mu_csf', 'est', 'var_cth_bm'], np.empty((*bin_coord_dim[2:], 2, 5)) * np.nan),
-        cs_param_cth_b = (['mu_hN', 'mu_dN', 'mu_csf', 'est', 'method', 'var_cth_b'], np.empty((*bin_coord_dim[2:], 2, 2, 2)) * np.nan),
+        cs_n = (['cs_mu_hN', 'cs_mu_dN', 'mu_csf'], np.empty(cs_bin_coord_dim) * np.nan), 
+        cs_p_cs = (['cs_mu_hN', 'cs_mu_dN', 'mu_csf'], np.empty(cs_bin_coord_dim) * np.nan),         
+        cs_freq = (['cs_mu_hN', 'cs_mu_dN', 'mu_csf', 'h_next', 'd_next'], np.empty((*cs_bin_coord_dim, n_bins, n_bins)) * np.nan),
+        cs_hedges = (['cs_mu_hN', 'cs_mu_dN', 'mu_csf', 'bin_edges'], np.empty((*cs_bin_coord_dim, n_bins + 1)) * np.nan),
+        cs_dedges = (['cs_mu_hN', 'cs_mu_dN', 'mu_csf', 'bin_edges'], np.empty((*cs_bin_coord_dim, n_bins + 1)) * np.nan),
+        cs_param_cod = (['cs_mu_hN', 'cs_mu_dN', 'mu_csf', 'var_cod'], np.empty((*cs_bin_coord_dim, 2)) * np.nan),
+        cs_param_cth_bm = (['cs_mu_hN', 'cs_mu_dN', 'mu_csf', 'est', 'var_cth_bm'], np.empty((*cs_bin_coord_dim, 2, 5)) * np.nan),
+        cs_param_cth_b = (['cs_mu_hN', 'cs_mu_dN', 'mu_csf', 'est', 'method', 'var_cth_b'], np.empty((*cs_bin_coord_dim, 2, 2, 2)) * np.nan),
     ),
     coords=dict(
         mu_h=bin_h,
         mu_d=bin_d,
         mu_hN = bin_hN,
         mu_dN = bin_dN,
+        cs_mu_hN = cs_bin_hN,
+        cs_mu_dN = cs_bin_dN,
         mu_csf = bin_csf, 
         method = ['ML', 'MoM'],
         est = ['coef', 'bse'],
@@ -230,13 +232,13 @@ if __name__ == "__main__":
 #   From clear sky
 # =============================================================================
     
-    bins_iter = itertools.product(bin_hN, bin_dN, bin_csf)
-    n_b = np.product([bin_coord_dim])
+    bins_iter = itertools.product(cs_bin_hN, cs_bin_dN, bin_csf)
+    n_b = np.product([cs_bin_coord_dim])
     
     for i, (hN, dN, csf) in zip(range(n_b), bins_iter):   
         
-        dic = dict(mu_hN = hN,
-                         mu_dN = dN, 
+        dic = dict(cs_mu_hN = hN,
+                         cs_mu_dN = dN, 
                          mu_csf = csf
                          )        
         
@@ -258,11 +260,16 @@ if __name__ == "__main__":
         ds.cs_p_cs.loc[dic] = p_cs
         
         # to cloud
+        df_temp = df_temp.loc[df_temp.z_t_next == 0]
         
+        if len(df_temp) < 2:
+            continue
+        
+
         # contains histogram of cth, cod and joint from clear sky
     
-        freq_hd, xedges, yedges, __ = plt.hist2d(df_sc.d_t_next, 
-                                                  df_sc.h_t_next, 
+        freq_hd, xedges, yedges, __ = plt.hist2d(df_temp.d_t_next, 
+                                                  df_temp.h_t_next, 
                                                   bins = [n_bins, n_bins])
      
         ds_hist = xr.Dataset(
@@ -281,11 +288,8 @@ if __name__ == "__main__":
         
         # fit
         #   cod
-        df_temp = df_temp.loc[df_temp.z_t_next == 0]
         
-        if len(df_temp) < 2:
-            continue
-        
+
         d_next = df_temp.d_t_next
         mu = d_next.mean()
         sigma = np.sqrt(n /  ( n - 1) * d_next.var())
@@ -348,11 +352,13 @@ if __name__ == "__main__":
         ds.p_cs.loc[dic] = p_cs
         
         # # to cloud
+        df_temp = df_temp.loc[df_temp.z_t_next == 0]
         
-        # # contains histogram of cth, cod and joint from clear sky
+        if len(df_temp) < 2:
+            continue        # # contains histogram of cth, cod and joint from clear sky
         
-        freq_hd, xedges, yedges, __ = plt.hist2d(df_sc.d_t_next, 
-                                                  df_sc.h_t_next, 
+        freq_hd, xedges, yedges, __ = plt.hist2d(df_temp.d_t_next, 
+                                                  df_temp.h_t_next, 
                                                   bins = [n_bins, n_bins])
          
         
@@ -364,10 +370,7 @@ if __name__ == "__main__":
         # fit
   
         #   cod
-        df_temp = df_temp.loc[df_temp.z_t_next == 0]
-        
-        if len(df_temp) < 2:
-            continue
+
 
         d_next = df_temp.d_t_next
         mu = d_next.mean()
