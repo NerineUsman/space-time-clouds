@@ -105,7 +105,16 @@ def plotCTHBetaMix(ax, alpha1, beta1, alpha2, beta2, p, n = 50,
                    mainlabel = None, 
                    maincolor = 'darkorange',
                    plotSubBeta = True, 
+                   param = 'standard',
                    **kwargs):
+    
+    if param == 'standard':
+        alpha1
+    elif param == 'mean_sum':
+        alpha1, beta1 = alpha1 * beta1, beta1 - alpha1 * beta1
+        alpha2, beta2 = alpha2 * beta2, beta2 - alpha2 * beta2
+    else: 
+        print('incorrect parameterization')
     
     if mainlabel == None:
         mainlabel = f'Beta mixture p = {p:.2f}'

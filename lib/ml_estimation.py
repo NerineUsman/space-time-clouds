@@ -148,6 +148,7 @@ class MyMixBetaML(GenericLikelihoodModel):
                                   maxiter=maxiter, maxfun=maxfun, 
                                   **kwds)
 
+
 def _ll_beta(y, X, alpha1, beta1):
     B = beta(alpha1, beta1)
     return B.logpdf(y).sum()    

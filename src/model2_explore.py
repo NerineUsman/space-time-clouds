@@ -18,6 +18,7 @@ import itertools
 sys.path.insert(0, './space-time-clouds/lib')
 sys.path.insert(0, '../lib/')
 import ml_estimation as ml
+import ml_estimation2 as ml2
 import test_stat as ts
 import model1_explore as me
 
@@ -31,6 +32,25 @@ hlim = [0, 16] #km
 dlim = [-1.5, 5.1] #log (d)
 
 # functions
+def fitMixBetaCTH(y):
+    h_ = ml.CTHtoUnitInt(y)
+    
+    if len(h_) > 1e4:
+        h_ = h_.sample(int(1e4))
+        print('decreased sample size')
+    # print(y.min(), y.max())
+    # print(h_.min(), h_.max())
+    
+    mu1 = h_.mean()
+    nu1 = 20
+    mu2 = 1 - mu1
+    nu2 = 20
+    start_params = [mu1, nu1, mu2, nu2, .8 ]
+    
+    ml_manual = ml2.MyMixBetaML(h_, h_).fit(disp = 0,
+                start_params = start_params)
+    
+    return ml_manual #params, conv
 
 
 # main
@@ -217,7 +237,7 @@ if __name__ == "__main__":
         mu_csf = bin_csf, 
         method = ['ML', 'MoM'],
         est = ['coef', 'bse'],
-        var_cth_bm = ['alpha1', 'beta1', 'alpha2', 'beta2', 'p'],
+        var_cth_bm = ['mu1', 'nu1', 'mu2', 'mu2', 'p'],
         var_cod = ['mu', 'sigma'],
         var_cth_b = ['alpha', 'beta']
     ),
@@ -226,10 +246,10 @@ if __name__ == "__main__":
     )
 
     param_names_b = ['alpha', 'beta']
-    param_names_bmix = ['alpha1',
-                    'beta1', 
-                    'alpha2', 
-                    'beta2', 
+    param_names_bmix = ['mu1',
+                    'nu1', 
+                    'mu2', 
+                    'nu2', 
                     'p'
                   ]
 
@@ -305,7 +325,7 @@ if __name__ == "__main__":
         #   cth
         if len(df_temp) < 9:
             continue
-        mix_beta_fit = me.fitMixBetaCTH(df_temp.h_t_next)
+        mix_beta_fit = fitMixBetaCTH(df_temp.h_t_next)
         params, bse = me.fitMixBetaCTHtoParams(mix_beta_fit)  ## fix such that p >.5
         x = ml.CTHtoUnitInt(df_temp.h_t_next)
         
@@ -387,7 +407,7 @@ if __name__ == "__main__":
         # #   cth
         if len(df_temp) < 9:
             continue
-        mix_beta_fit = me.fitMixBetaCTH(df_temp.h_t_next)
+        mix_beta_fit = fitMixBetaCTH(df_temp.h_t_next)
         params, bse = me.fitMixBetaCTHtoParams(mix_beta_fit)  ## fix such that p >.5
         x = ml.CTHtoUnitInt(df_temp.h_t_next)
         
