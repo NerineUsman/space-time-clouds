@@ -104,32 +104,7 @@ if __name__ == "__main__":
     df.loc[df.h_t_next > ml.h_max , 'h_t_next'] = ml.h_max
     
     print(f'h_max is {df[["h_t", "h_t_next"]].max().max():.2f} m')
-# =============================================================================
-#   from clouds
-# =============================================================================
-    df_c = df.loc[(df.z_t == 0)]
-    df_c = df_c.copy()
-# =============================================================================
-#   Cloud to cloud    
-# =============================================================================
-    df_cc = df.loc[(df.z_t == 0) & (df.z_t_next == 0) ]
-    df_cc.insert(len(df_cc.columns), 'dh', df_cc.apply(lambda row: row.h_t_next - row.h_t, axis = 1))
-    df_cc.insert(len(df_cc.columns), 'dd', df_cc.apply(lambda row: row.d_t_next - row.d_t, axis = 1))
-    df_cc = df_cc.copy()
-        
-# =============================================================================
-#   Clear sky to cloud
-# =============================================================================
 
-    df_sc = df.loc[(df.z_t == 1) & (df.z_t_next == 0) ]
-    df_sc = df_sc.copy()
-    
-# =============================================================================
-#   To clear sky
-# =============================================================================
-
-    df_s = df.loc[(df.z_t_next == 1)]
-    df_s = df_s.copy()
 
 # =============================================================================
 #   Model1 Explorative
@@ -158,53 +133,6 @@ if __name__ == "__main__":
     cs_bin_coord_dim = (n_cs_hN, n_cs_dN, n_csf)
     
     
-# =============================================================================
-#  0. Overall
-# =============================================================================
-
-    # contains histogram for cloud distribution
-    # and transition cross matrix for cloud / clear sky  transitions
-    
-
-    freq, xedges, yedges, __ = plt.hist2d(df_c.d_t, 
-                                              df_c.h_t, 
-                                              bins = [n_bins, n_bins])
- 
-    ds_hist = xr.Dataset(
-    data_vars=dict(
-    ),
-    coords = dict(
-        dedges = xedges,
-        hedges = yedges
-        )
-    )
-    
-    ds_hist['freq'] = (['h', 'd'], freq)
-    ds_hist.to_netcdf(loc_model + 'expl_hist_clouds.nc')
-    plt.show()
-    plt.figure(2)
-    freq, xedges, yedges, __ = plt.hist2d(df_c.d_bar_t, 
-                                              df_c.h_bar_t, 
-                                              bins = [n_bins, n_bins])
- 
-    ds_hist = xr.Dataset(
-    data_vars=dict(
-    ),
-    coords = dict(
-        dedges = xedges,
-        hedges = yedges
-        )
-    )
-    plt.show()
-    
-    
-    ds_hist['freq'] = (['h', 'd'], freq)
-    ds_hist.to_netcdf(loc_model + 'expl_hist_cloudN.nc')
-
-    T = T_total = pd.crosstab(df.ct, df.ct_next, rownames=['from'], colnames=[ 'to'], normalize = 'index', margins = True)
-    T.to_csv(loc_model + 'expl_transition_ctypes.csv')
-    
-    
     
 # =============================================================================
 #     Create ds with all estimates
@@ -214,9 +142,9 @@ if __name__ == "__main__":
     ds = xr.Dataset(
     data_vars=dict(
         n = (['mu_h', 'mu_d', 'mu_hN', 'mu_dN', 'mu_csf'], np.empty(bin_coord_dim) * np.nan), 
-        p_cs = (['mu_h', 'mu_d', 'mu_csf'], np.empty((n_h, n_d, n_csf)) * np.nan),         
-        param_cod = (['mu_h', 'mu_d', 'mu_dN', 'var_cod'], np.empty((n_h, n_d, n_dN, 2)) * np.nan),
-        param_cth_bm = (['mu_h', 'mu_d', 'mu_hN', 'est', 'var_cth_bm'], np.empty((n_h, n_d, n_hN, 2, 5)) * np.nan),
+        p_cs = (['mu_h', 'mu_d', 'mu_csf', 'n_or_val'], np.empty((n_h, n_d, n_csf, 2)) * np.nan),         
+        param_cod = (['mu_h', 'mu_d', 'mu_dN', 'var_cod', 'n_or_val'], np.empty((n_h, n_d, n_dN, 2, 2)) * np.nan),
+        param_cth_bm = (['mu_h', 'mu_d', 'mu_hN', 'est', 'var_cth_bm', 'n_or_val'], np.empty((n_h, n_d, n_hN, 2, 5, 2)) * np.nan),
         cs_n = (['cs_mu_hN', 'cs_mu_dN', 'mu_csf'], np.empty(cs_bin_coord_dim) * np.nan), 
         cs_p_cs = (['mu_csf'], np.empty(n_csf) * np.nan),         
         cs_param_cod = (['cs_mu_dN', 'var_cod'], np.empty((n_cs_dN, 2)) * np.nan),
@@ -230,6 +158,7 @@ if __name__ == "__main__":
         cs_mu_hN = cs_bin_hN,
         cs_mu_dN = cs_bin_dN,
         mu_csf = bin_csf, 
+        n_or_val = ['val', 'n'],
         method = ['ML', 'MoM'],
         est = ['coef', 'bse'],
         var_cth_bm = ['mu1', 'nu1', 'mu2', 'mu2', 'p'],
@@ -251,7 +180,7 @@ if __name__ == "__main__":
 # =============================================================================
 #   From clear sky
 # =============================================================================
-    
+    print('From Clear sky\n')
     bins_iter = itertools.product(cs_bin_hN, cs_bin_dN, bin_csf)
     n_b = np.product([cs_bin_coord_dim])
     
@@ -278,6 +207,7 @@ if __name__ == "__main__":
             
 
                 
+    print('\tp_cs')
 
     
     ####
@@ -305,6 +235,8 @@ if __name__ == "__main__":
     ####
     # COD
     ####
+    print('\tCOD')
+
                 
     for i, dN in zip(range(n_cs_dN), cs_bin_dN):   
         
@@ -332,6 +264,7 @@ if __name__ == "__main__":
     ####
     # CTH
     ####
+    print('\tCTH')
                 
     for i, hN in zip(range(n_cs_hN), cs_bin_hN):   
         
@@ -352,16 +285,15 @@ if __name__ == "__main__":
         
         ds.cs_param_cth_bm.loc[dic] =  [params, bse]
         
-        beta_fit = me.fitBetaCTH(df_temp.h_t_next)
-        ## Beta MoM
-        param_mom = ml.MoM_sb(x)
+        # beta_fit = me.fitBetaCTH(df_temp.h_t_next)
+        # ## Beta MoM
+        # param_mom = ml.MoM_sb(x)
         
-        ds.cs_param_cth_b.loc[dic] = [[[beta_fit.params[0], beta_fit.params[1]],
-                                  [param_mom[0], param_mom[1]]],
-                                 [[beta_fit.bse[0], beta_fit.bse[1]],
-                                  [np.nan, np.nan]]]
+        # ds.cs_param_cth_b.loc[dic] = [[[beta_fit.params[0], beta_fit.params[1]],
+        #                           [param_mom[0], param_mom[1]]],
+        #                          [[beta_fit.bse[0], beta_fit.bse[1]],
+        #                           [np.nan, np.nan]]]
                 
-
     # n, freq_hd, hedges, dedges, p_cs, param_cod, param_b, param_bm
 
 # =============================================================================
@@ -371,32 +303,34 @@ if __name__ == "__main__":
     bins_iter = itertools.product(bin_h, bin_d, bin_hN, bin_dN, bin_csf)
     n_b = np.product([bin_coord_dim])
     
+    print('\nFrom Cloud \n')
     
-    ####
-    # n
-    ####
-    for i, (h, d, hN, dN, csf) in zip(range(n_b), bins_iter):   
-        dic = dict(mu_h = h,
-                         mu_d = d, 
-                         mu_hN = hN,
-                         mu_dN = dN, 
-                         mu_csf = csf
-                         )
+    # ####
+    # # n
+    # ####
+    # for i, (h, d, hN, dN, csf) in zip(range(n_b), bins_iter):   
+    #     dic = dict(mu_h = h,
+    #                      mu_d = d, 
+    #                      mu_hN = hN,
+    #                      mu_dN = dN, 
+    #                      mu_csf = csf
+    #                      )
         
-        df_temp = df.loc[(df.z_t == 0) & 
-                         (h - dH <= df.h_t) & (df.h_t <= h  + dH) & 
-                         (d - dD <= df.d_t) & (df.d_t <= d  + dD) & 
-                         (hN - dHN <= (df.h_bar_t - df.h_t)) & ((df.h_bar_t - df.h_t) <= hN  + dHN) & 
-                         (dN - dDN <= (df.d_bar_t - df.d_t)) & ((df.d_bar_t - df.d_t) <= dN  + dDN) & 
-                         (csf - dCSF <= df.csf_t) & (df.csf_t <= csf  + dCSF)  
-                         ].copy()
+    #     df_temp = df.loc[(df.z_t == 0) & 
+    #                      (h - dH <= df.h_t) & (df.h_t <= h  + dH) & 
+    #                      (d - dD <= df.d_t) & (df.d_t <= d  + dD) & 
+    #                      (hN - dHN <= (df.h_bar_t - df.h_t)) & ((df.h_bar_t - df.h_t) <= hN  + dHN) & 
+    #                      (dN - dDN <= (df.d_bar_t - df.d_t)) & ((df.d_bar_t - df.d_t) <= dN  + dDN) & 
+    #                      (csf - dCSF <= df.csf_t) & (df.csf_t <= csf  + dCSF)  
+    #                      ].copy()
         
-        n  = len(df_temp)
-        ds.n.loc[dic] = n
-        
+    #     n  = len(df_temp)
+    #     ds.n.loc[dic] = n
+    
     ####
     # p_cs
     ####
+    print('\tp_cs')
     bins_iter = itertools.product(bin_h, bin_d, bin_csf)
     n_b = np.product([bin_coord_dim])
     
@@ -415,17 +349,23 @@ if __name__ == "__main__":
         
         n  = len(df_temp)
         
+        dic['n_or_val'] = 'n'
+        ds.p_cs.loc[dic] = n
+        
         if n == 0:
             continue
           
         
         # # to clear sky
         p_cs = len(df_temp.loc[df_temp.z_t_next == 1])/ len(df_temp)
+        
+        dic['n_or_val'] = 'val'
         ds.p_cs.loc[dic] = p_cs
 
     ####
     # COD
     ####          
+    print('\tCOD')
     bins_iter = itertools.product(bin_h, bin_d, bin_dN)
     n_b = np.product([bin_coord_dim])
     
@@ -435,12 +375,16 @@ if __name__ == "__main__":
                          mu_dN = dN, 
                          )
         
-        df_temp = df.loc[(df.z_t == 0) & (df.z_t_next == 0)
+        df_temp = df.loc[(df.z_t == 0) & (df.z_t_next == 0) &
                          (h - dH <= df.h_t) & (df.h_t <= h  + dH) & 
                          (d - dD <= df.d_t) & (df.d_t <= d  + dD) & 
                          (dN - dDN <= (df.d_bar_t - df.d_t)) & ((df.d_bar_t - df.d_t) <= dN  + dDN)
                          ].copy()
         
+        n  = len(df_temp)
+        
+        dic['n_or_val'] = 'n'
+        ds.param_cod.loc[dic] = n
 
         if len(df_temp) < 2:
             continue        
@@ -451,12 +395,14 @@ if __name__ == "__main__":
         mu = d_next.mean()
         sigma = np.sqrt(n /  ( n - 1) * d_next.var())
         
+        dic['n_or_val'] = 'val'
         ds.param_cod.loc[dic] =  [mu, sigma]
         
     
     ####
     # CTH
-    ####          
+    ####      
+    print('\tCTH')    
     bins_iter = itertools.product(bin_h, bin_d,  bin_hN)
     n_b = np.product([bin_coord_dim])
     
@@ -466,11 +412,15 @@ if __name__ == "__main__":
                          mu_hN = hN,
                          )
         
-        df_temp = df.loc[(df.z_t == 0) & (df.z_t_next == 0)
+        df_temp = df.loc[(df.z_t == 0) & (df.z_t_next == 0) &
                          (h - dH <= df.h_t) & (df.h_t <= h  + dH) & 
                          (d - dD <= df.d_t) & (df.d_t <= d  + dD) & 
                          (hN - dHN <= (df.h_bar_t - df.h_t)) & ((df.h_bar_t - df.h_t) <= hN  + dHN) 
                          ].copy()
+        
+        n = len(df_temp)
+        dic['n_or_val'] = 'n'
+        ds.param_cth_bm.loc[dic] = n
         
         # #   cth
         if len(df_temp) < 9:
@@ -480,16 +430,17 @@ if __name__ == "__main__":
         params, bse = me.fitMixBetaCTHtoParams(mix_beta_fit)  ## fix such that p >.5
         x = ml.CTHtoUnitInt(df_temp.h_t_next)
         
+        dic['n_or_val'] = 'val'
         ds.param_cth_bm.loc[dic] = [params, bse]
         
-        beta_fit = me.fitBetaCTH(df_temp.h_t_next)
-        ## Beta MoM
-        param_mom = ml.MoM_sb(x)
+        # beta_fit = me.fitBetaCTH(df_temp.h_t_next)
+        # ## Beta MoM
+        # param_mom = ml.MoM_sb(x)
         
-        ds.param_cth_b.loc[dic] = [[[beta_fit.params[0], beta_fit.params[1]],
-                                  [param_mom[0], param_mom[1]]],
-                                  [[beta_fit.bse[0], beta_fit.bse[1]],
-                                  [np.nan, np.nan]]]
+        # ds.param_cth_b.loc[dic] = [[[beta_fit.params[0], beta_fit.params[1]],
+        #                           [param_mom[0], param_mom[1]]],
+        #                           [[beta_fit.bse[0], beta_fit.bse[1]],
+        #                           [np.nan, np.nan]]]
                 
 
     ds.to_netcdf(loc_model + 'local_param.nc')
