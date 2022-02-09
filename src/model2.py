@@ -12,7 +12,6 @@ import os, sys
 import numpy as np
 import pandas as pd
 import xarray as xr
-import matplotlib.pyplot as plt
 import itertools
 
 sys.path.insert(0, './space-time-clouds/lib')
@@ -305,28 +304,7 @@ if __name__ == "__main__":
     
     print('\nFrom Cloud \n')
     
-    # ####
-    # # n
-    # ####
-    # for i, (h, d, hN, dN, csf) in zip(range(n_b), bins_iter):   
-    #     dic = dict(mu_h = h,
-    #                      mu_d = d, 
-    #                      mu_hN = hN,
-    #                      mu_dN = dN, 
-    #                      mu_csf = csf
-    #                      )
-        
-    #     df_temp = df.loc[(df.z_t == 0) & 
-    #                      (h - dH <= df.h_t) & (df.h_t <= h  + dH) & 
-    #                      (d - dD <= df.d_t) & (df.d_t <= d  + dD) & 
-    #                      (hN - dHN <= (df.h_bar_t - df.h_t)) & ((df.h_bar_t - df.h_t) <= hN  + dHN) & 
-    #                      (dN - dDN <= (df.d_bar_t - df.d_t)) & ((df.d_bar_t - df.d_t) <= dN  + dDN) & 
-    #                      (csf - dCSF <= df.csf_t) & (df.csf_t <= csf  + dCSF)  
-    #                      ].copy()
-        
-    #     n  = len(df_temp)
-    #     ds.n.loc[dic] = n
-    
+   
     ####
     # p_cs
     ####
