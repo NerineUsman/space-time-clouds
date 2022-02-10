@@ -29,6 +29,11 @@ def mnToAb(mu, nu):
     beta = nu - alpha
     return alpha, beta
 
+def mixmnToab(mu1, nu1, mu2, nu2, p):
+    alpha1, beta1 = mnToAb(mu1, nu1)
+    alpha2, beta2 = mnToAb(mu2, nu2)
+    return alpha1, beta1, alpha2, beta2, p
+
 # =============================================================================
 # Beta mixture
 # =============================================================================
