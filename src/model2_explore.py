@@ -339,7 +339,32 @@ if __name__ == "__main__":
                                   [param_mom[0], param_mom[1]]],
                                  [[beta_fit.bse[0], beta_fit.bse[1]],
                                   [np.nan, np.nan]]]
-                
+        
+    # special case csf = 1
+    
+    
+    df_temp = df.loc[(df.z_t == 1) & (df.z_t_next == 0) &
+                     (df.csf_t == 1)
+                     ].copy()
+    
+    
+    if len(df_temp) > 2:
+        
+        # fit
+        #   cod
+        d_next = df_temp.d_t_next
+        mu = d_next.mean()
+        sigma = np.sqrt(n /  ( n - 1) * d_next.var())
+        
+        ds['cs_csf_param_cod'] = (['var_cod'], [mu, sigma])
+    if len(df_temp > 9):
+        
+        mix_beta_fit = fitMixBetaCTH(df_temp.h_t_next)
+        params, bse = me.fitMixBetaCTHtoParams(mix_beta_fit)  ## fix such that p >.5
+        x = ml.CTHtoUnitInt(df_temp.h_t_next)
+        
+        ds['cs_csf_param_cth_bm'] =  (['est','var_cth_bm'],[params, bse])
+                        
 
     # n, freq_hd, hedges, dedges, p_cs, param_cod, param_b, param_bm
 

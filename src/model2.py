@@ -140,7 +140,6 @@ if __name__ == "__main__":
 
     ds = xr.Dataset(
     data_vars=dict(
-        n = (['mu_h', 'mu_d', 'mu_hN', 'mu_dN', 'mu_csf'], np.empty(bin_coord_dim) * np.nan), 
         p_cs = (['mu_h', 'mu_d', 'mu_csf', 'n_or_val'], np.empty((n_h, n_d, n_csf, 2)) * np.nan),         
         param_cod = (['mu_h', 'mu_d', 'mu_dN', 'var_cod', 'n_or_val'], np.empty((n_h, n_d, n_dN, 2, 2)) * np.nan),
         param_cth_bm = (['mu_h', 'mu_d', 'mu_hN', 'est', 'var_cth_bm', 'n_or_val'], np.empty((n_h, n_d, n_hN, 2, 5, 2)) * np.nan),
@@ -160,7 +159,7 @@ if __name__ == "__main__":
         n_or_val = ['val', 'n'],
         method = ['ML', 'MoM'],
         est = ['coef', 'bse'],
-        var_cth_bm = ['mu1', 'nu1', 'mu2', 'mu2', 'p'],
+        var_cth_bm = ['mu1', 'nu1', 'mu2', 'nu2', 'p'],
         var_cod = ['mu', 'sigma'],
         var_cth_b = ['alpha', 'beta']
     ),
@@ -243,7 +242,7 @@ if __name__ == "__main__":
                          )        
         
         df_temp = df.loc[(df.z_t == 1) & (df.z_t_next == 0) &
-                         (dN - dDN <= df.d_bar_t) & (df.d_bar_t <= dN  + dDN) 
+                         (dN - dDN <= df.d_bar_t) & (df.d_bar_t <= dN + dDN) 
                          ].copy()
         
         
@@ -258,7 +257,8 @@ if __name__ == "__main__":
         sigma = np.sqrt(n /  ( n - 1) * d_next.var())
         
         ds.cs_param_cod.loc[dic] = [mu, sigma]
-    
+        
+
         
     ####
     # CTH
@@ -270,7 +270,7 @@ if __name__ == "__main__":
         dic = dict(cs_mu_hN = hN
                          )        
         
-        df_temp = df.loc[(df.z_t == 1) & (df.z_t == 0) &
+        df_temp = df.loc[(df.z_t == 1) & (df.z_t_next == 0) &
                          (hN - dHN <= df.h_bar_t) & (df.h_bar_t <= hN  + dHN) 
                          ].copy()
         
@@ -292,7 +292,33 @@ if __name__ == "__main__":
         #                           [param_mom[0], param_mom[1]]],
         #                          [[beta_fit.bse[0], beta_fit.bse[1]],
         #                           [np.nan, np.nan]]]
-                
+        
+        
+        
+    # special case csf = 1 
+    
+    df_temp = df.loc[(df.z_t == 1) & (df.z_t_next == 0) &
+                     (df.csf_t == 1)
+                     ].copy()
+
+    
+    if len(df_temp) > 2:
+        
+        # fit
+        #   cod
+        d_next = df_temp.d_t_next
+        mu = d_next.mean()
+        sigma = np.sqrt(n /  ( n - 1) * d_next.var())
+        
+        ds['cs_csf_param_cod'] = (['var_cod'], [mu, sigma])
+    if len(df_temp > 9):
+        
+        mix_beta_fit = fitMixBetaCTH(df_temp.h_t_next)
+        params, bse = me.fitMixBetaCTHtoParams(mix_beta_fit)  ## fix such that p >.5
+        x = ml.CTHtoUnitInt(df_temp.h_t_next)
+        
+        ds['cs_csf_param_cth_bm'] =  (['est','var_cth_bm'],[params, bse])
+        
     # n, freq_hd, hedges, dedges, p_cs, param_cod, param_b, param_bm
 
 # =============================================================================
