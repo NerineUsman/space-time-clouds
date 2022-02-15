@@ -67,7 +67,7 @@ if __name__ == "__main__":
     dD = .5
     dHN = 500
     dDN = .5
-    dCSF = .4
+    dCSF = .1
     
     N = 5000
     
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     bin_d = np.arange(-1, 4.5, dd)
     bin_hN = np.arange(-1500, 1500 + dHN/2, dHN / 2 )
     bin_dN = np.arange(-.8, .8 + dDN/2, dDN / 2 )
-    bin_csf = [.1, .3, .5, .7, .9]
+    bin_csf = np.linspace(0, 1, 10)
     
     cs_bin_hN = np.arange(0 + dHN/2, ml.h_max, dHN / 2 )
     cs_bin_dN = np.arange(-1, 4.5, dDN)  
