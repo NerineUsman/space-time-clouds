@@ -248,7 +248,7 @@ if __name__ == "__main__":
     end_date = datetime.strptime('11-12-2020', '%d-%m-%Y')
     idx = (start_date < date)  & (date < end_date) 
     
-    dates = dates[idx]
+    dates = dates[idx].reset_index(drop = True)
     
     file = dates.file_name.loc[0]
     images = xr.open_dataset(file)
