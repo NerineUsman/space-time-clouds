@@ -238,7 +238,7 @@ if __name__ == "__main__":
 #     Generate X0
 # =============================================================================
     
-    with open(loc_clean_data + 'clean_dates.txt', 'rb') as f:
+    with open(loc_clean_data + 'clean_dates.pickle', 'rb') as f:
         dates = pickle.load(f)
     
     # print(dates)
