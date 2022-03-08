@@ -9,19 +9,13 @@ Created on Tue Mar  8 11:35:55 2022
 
 # import modules
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import cm
-import matplotlib as mpl
-from cmcrameri import cm as cmc
-import pandas as pd
 import xarray as xr
 import itertools
 import pickle
 from datetime import datetime 
 
-import pdb
 import sys, os
-from scipy.stats import norm, beta, bernoulli
+from scipy.stats import beta, bernoulli
 
 sys.path.insert(0, './space-time-clouds/lib')
 sys.path.insert(0, '../lib/')
@@ -30,9 +24,6 @@ sys.path.insert(0, '../src')
 
 import ml_estimation as ml
 import ml_estimation2 as ml2
-import model1_plots as mp
-import model1_explore as me
-import model1_sim as sim1
 import Utilities as util
 
 
