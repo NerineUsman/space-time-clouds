@@ -60,7 +60,7 @@ def get_param(ds, loc, method = 'nearest'): # think more about interpolation met
 #     ds_c.interpolate_na(dim = 'mu_d', method = method, fill_value = 'extrapolate')
     return ds.interp(loc, method = method, kwargs={"fill_value": "extrapolate"})
 
-def step_pixel(z, h, d, csf, h_bar, d_bar, ds):
+def step_pixel(z, h, d, csf, h_bar, d_bar, ds, method = 'standard'):
     """Makes one step.
     Args:
         x (np.array(6,)):                
@@ -69,7 +69,10 @@ def step_pixel(z, h, d, csf, h_bar, d_bar, ds):
     Returns:
         np.array (3,): updated state of the pixel (z, h, d)
     """
-
+    
+    
+    if method not in ('standard', 'main_beta'):
+        raise NotImplementedError("%s is unsupported: Use standard or main_beta " % method)
     
     ## p_cs
     if z: 
@@ -105,7 +108,8 @@ def step_pixel(z, h, d, csf, h_bar, d_bar, ds):
             loc = dict(mu_h = h, mu_d = d, mu_dN = d_bar)
             cod_param = get_param(ds.param_cod, loc).data
             loc = dict(mu_h = h, mu_d = d, mu_hN = h_bar)
-            cth_param = get_param(ds.param_cth_bm.loc[dict(est = 'coef')], loc).data
+            cth_param = get_param(ds.param_cth_bm#.loc[dict(est = 'coef')]
+                                  , loc).data
             
 #         print(cod_param.data, cth_param.data)
         mu, sigma = cod_param
@@ -117,8 +121,12 @@ def step_pixel(z, h, d, csf, h_bar, d_bar, ds):
 #         print(cth_param)
         x = np.random.rand(1)
         y1 = beta.rvs(alpha1, beta1)
+        
+        if method == 'main_beta':
+            p = 1
+        
         if p == 1:
-            h_next = y1
+            h_next = ml.UnitInttoCTH(y1)
         else:
             y2 = beta.rvs(alpha2, beta2)
             u = (x < p)
@@ -142,7 +150,7 @@ def neighborhood(ds, i, j,
     
     return N
 
-def simulation(T, X0):
+def simulation(T, X0, **kwargs):
     X = X0.copy(deep = True)
     t = 0
     for t in range(T):
@@ -164,7 +172,7 @@ def simulation(T, X0):
     #         print('x = ', y[:3])
             if np.isnan(y[0]):
                 continue
-            x_next = step_pixel(*y, ds)
+            x_next = step_pixel(*y, ds, **kwargs)
     #         print('x_n =',x_next)
             X_next.z.loc[pix] = x_next[0]
             X_next.h.loc[pix] = x_next[1]
@@ -187,6 +195,7 @@ if __name__ == "__main__":
 
     N = int(input['N'])
     T = int(input['T'])
+    method = input['method']
     
     ds = xr.open_dataset(loc_model + 'dH=500_dD=0_5_N=5000local_param.nc')
 
@@ -231,6 +240,9 @@ if __name__ == "__main__":
     
 
     ds = ds.loc[dict(n_or_val = 'val')]
+
+    ds_temp_d = ds.param_cth_bm.sel(mu_h = ds.mu_h[ds.mu_h < 14700], est = 'coef').interpolate_na(dim = 'mu_d', method = 'nearest', fill_value="extrapolate")
+    ds['param_cth_bm'] = ds_temp_d
     ds = ds.interpolate_na(dim = 'mu_h', method = 'nearest', fill_value="extrapolate")
     
     
@@ -282,6 +294,6 @@ if __name__ == "__main__":
 
     X0 = images.sel(t = images.t[0], i = images.i[:N], j = images.j[:N])
     X0['t'] = 0
-    X = simulation(T, X0)
+    X = simulation(T, X0, method = method)
     
-    X.to_netcdf(loc_sim + f'simulation2_T{T}_N{N}_{file.rsplit("/")[-1]}')
+    X.to_netcdf(loc_sim + f'simulation2_{method}_T{T}_N{N}_{file.rsplit("/")[-1]}')
