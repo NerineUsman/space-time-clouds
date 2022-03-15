@@ -168,4 +168,4 @@ if __name__ == "__main__":
                      (d - dD <= df.d_t) & (df.d_t <= d  + dD)  
                      ].copy()
  
-    df.to_csv(loc_model + 'expl_model2_small_data_set.nc')
+    df.to_csv(loc_model + 'expl_model2_small_data_set.csv')
