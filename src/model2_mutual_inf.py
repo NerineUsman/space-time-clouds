@@ -54,12 +54,13 @@ def mutual_infdd(x, n = 50, binx = None, biny = None):
     py, yedges = np.histogramdd(Y, bins = biny)
     
     bins = [*xedges, *yedges]
+    print([b.shape for b in bins])
 
     h, edges= np.histogramdd(x, bins = bins)
     plt.clf()
     
     
-    shape = [n] * len(x)
+    shape = [*px.shape, *py.shape] #[n] * len(x)
     lists = [np.arange(s) for s in shape]
 
     px = px/N
@@ -68,7 +69,7 @@ def mutual_infdd(x, n = 50, binx = None, biny = None):
     I = 0
 
     for i in itertools.product(*lists):
-#         print(i)
+        # print(i)
 #         print(h)
         x = i[0]
         y = i[1:]
@@ -94,6 +95,7 @@ if __name__ == "__main__":
    
     n = 100
     
+    N = 10 # number of bins for neighbourhood
     
     prop = {'n' :n }
     
@@ -168,7 +170,11 @@ if __name__ == "__main__":
         
             x =[X,*Y] 
 
-            m = mutual_infdd(x, n = n)
+            biny = [N] * (len(expl_var) - 2)
+            
+            biny = [n, n , *biny]
+            
+            m = mutual_infdd(x, n = n, biny = biny)
             
             row = dict(X = var, Y = expl_var, I = m)
             row_lists.append(row)
