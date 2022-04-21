@@ -69,6 +69,47 @@ def classifyISCCP(cod, cth, dqf_cod, bound = [3.6, 23, 2e3, 8e3]):
              )
     return ct.astype(int)
 
+def classISCCP(cod, cth, bound = [3.6, 23, 2e3, 8e3]):
+    """
+    Function to classify pixels based on cod and cth. 
+    cod, cth, dqf_cod should all be of the same shape. 
+    input: cod : (mxn) - array.  cloud optical depth
+           cth : (mxn) - array.  cloud top height
+           dqf_cod: (mxn) - array. data quality flags for cod data. 6 for clear sky, 0 for good quality. 
+    
+    bound = [lower split value cod, upper split value cod, 
+                lower split value cth, upper split value cth ]
+    output: ct : (mxn) - array. contains cloud classes indicated by
+                0 - invalid pixel
+                1 - clear sky
+                2 - cumulus
+                3 - altocumulus
+                4 - cirrus
+                5 - stratocumulus
+                6 - altostratus
+                7 - cirrostratus
+                8 - stratus
+                9 - nimbostratus
+                10 - deep convection
+    """
+    b_cod = bound[:2]
+    b_cth = bound[2:]
+    ct =  np.where(cod < b_cod[0] , 
+                                np.where(cth<b_cth[0], 2,
+                                        np.where(cth< b_cth[1], 3, 4)),
+                       np.where(cod< b_cod[1] , 
+                                np.where(cth<b_cth[0], 5,
+                                        np.where(cth< b_cth[1], 6, 7)
+                                        ), 
+                                np.where(cth<b_cth[0], 8,
+                                        np.where(cth< b_cth[1], 9, 10)
+                                        )
+                      )
+             )
+    return ct.astype(int)
+
+
+
 def histClassifications(ct, ax = None):
     if ax is None:
         ax = plt.gca()

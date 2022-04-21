@@ -51,6 +51,41 @@ def fitMixBetaCTH(y):
     
     return ml_manual #params, conv
 
+def mutual_infdd(x, n = 50):
+    X = x[0]
+    Y = x[1:]
+    
+    N = len(X)
+    px, xedges = np.histogramdd(X, bins = n)
+    py, yedges = np.histogramdd(Y, bins = n)
+    h, edges= np.histogramdd(x, bins = n)
+    
+    shape = [n] * len(x)
+    lists = [np.arange(s) for s in shape]
+
+    
+    
+    px = px/N
+    py = py/N
+    h = h/N
+    I = 0
+
+    for i in itertools.product(*lists):
+
+        x = i[0]
+        y = i[1:]
+        p_xy = h[i]
+        p_x = px[x]
+        p_y = py[y]
+        if p_xy == 0:
+            term = 0
+        else:
+            term = p_xy * np.log(p_xy / (p_x * p_y) )
+        I += term
+    return I
+
+
+
 
 # main
 if __name__ == "__main__":
@@ -143,10 +178,12 @@ if __name__ == "__main__":
         p_cs = (['mu_h', 'mu_d', 'mu_csf', 'n_or_val'], np.empty((n_h, n_d, n_csf, 2)) * np.nan),         
         param_cod = (['mu_h', 'mu_d', 'mu_dN', 'var_cod', 'n_or_val'], np.empty((n_h, n_d, n_dN, 2, 2)) * np.nan),
         param_cth_bm = (['mu_h', 'mu_d', 'mu_hN', 'est', 'var_cth_bm', 'n_or_val'], np.empty((n_h, n_d, n_hN, 2, 5, 2)) * np.nan),
+        I = (['mu_h', 'mu_d', 'var_state', 'var_extra_cond'], np.empty((n_h, n_d, 3, 3)) * np.nan), 
         cs_n = (['cs_mu_hN', 'cs_mu_dN', 'mu_csf'], np.empty(cs_bin_coord_dim) * np.nan), 
         cs_p_cs = (['mu_csf'], np.empty(n_csf) * np.nan),         
         cs_param_cod = (['cs_mu_dN', 'var_cod'], np.empty((n_cs_dN, 2)) * np.nan),
         cs_param_cth_bm = (['cs_mu_hN', 'est', 'var_cth_bm'], np.empty((n_cs_hN, 2, 5)) * np.nan),
+        cs_I = (['var_state', 'var_extra_cond'], np.empty((3, 3)) * np.nan), 
     ),
     coords=dict(
         mu_h=bin_h,
@@ -161,7 +198,9 @@ if __name__ == "__main__":
         est = ['coef', 'bse'],
         var_cth_bm = ['mu1', 'nu1', 'mu2', 'nu2', 'p'],
         var_cod = ['mu', 'sigma'],
-        var_cth_b = ['alpha', 'beta']
+        var_cth_b = ['alpha', 'beta'], 
+        var_state = ['h_t', 'd_t', 'z_t'],
+        var_extra_cond = ['hN', 'dN', 'csf'],
     ),
     # attrs=dict(dh = dh, dd = dd
     # ),
@@ -183,8 +222,16 @@ if __name__ == "__main__":
     n_b = np.product([cs_bin_coord_dim])
     
     ###
+    # I
+    ###
+    
+    df_temp = df.loc[(df.z_t == 1)] 
+    
+    
+    ###
     # n
     ###
+    
     for i, (hN, dN, csf) in zip(range(n_b), bins_iter):   
         
         dic = dict(cs_mu_hN = hN,

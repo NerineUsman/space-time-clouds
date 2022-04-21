@@ -22,12 +22,7 @@ input_file = './space-time-clouds/src/input_model.txt'
 sys.path.insert(0, './space-time-clouds/lib')
 sys.path.insert(0, '../lib/')
 
-import model1_data as md
 
-
-
-
-# 
 # variables
 src_path = os.path.dirname(os.path.realpath(__file__))
 input_file = src_path + '/input_model.txt'

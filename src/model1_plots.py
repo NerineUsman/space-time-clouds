@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 from matplotlib.pyplot import cm
 from cmcrameri import cm as  cmc
+import matplotlib.colors as mcolors
+
 
 from scipy.stats import norm, beta
 
@@ -25,6 +27,7 @@ sys.path.insert(0, '../lib')
 import ml_estimation as ml
 import model1_explore as me
 import model1 as mod
+import Utilities as util
 
 
 
@@ -204,6 +207,7 @@ def plotLocalParamCod(ax, theta,
                       logscale = False,
 #                       n = 5,
                       cmap = cm.Blues,
+                      ind = [0, 10], 
                       **kwargs):
     """
     
@@ -229,7 +233,7 @@ def plotLocalParamCod(ax, theta,
         DESCRIPTION.
 
     """
-    ind = [0,10]#,20,30,40]
+
     mu_h = theta.mu_h[ind]
     mu_d = theta.mu_d
     color = cmap(np.linspace(.2,1, len(ind)))
@@ -252,6 +256,7 @@ def plotLocalParamCod(ax, theta,
 def plotLocalParam2d(ax, theta,
                      cmap = cmc.batlow,
                      norm = None,
+                     logscale = False,
                     **kwargs):
     """
     
@@ -278,13 +283,23 @@ def plotLocalParam2d(ax, theta,
 
     """
     theta.coords["mu_h"] = theta.coords["mu_h"] * 1e-3
+    
+    if logscale:
+        theta = theta.where(theta > 0)
+        norm = mpl.colors.LogNorm()
+    
     hist = theta.plot(ax = ax, cmap = cmap, norm = norm, **kwargs)
     ax.set_xlabel('log COD ($\cdot$)')
     ax.set_ylabel('CTH (km)')
     return ax, hist
     
 
-def plotLocalParam(theta, logscale = False, cmapsv = cmc.oslo_r, **kwargs):
+def plotLocalParam(theta,
+                   logscale = False,
+                   cmapsv = cmc.oslo_r, 
+                   cod_kwargs = {}, 
+                   cth_kwargs = {}, 
+                   **kwargs):
     """
     
 
@@ -308,8 +323,8 @@ def plotLocalParam(theta, logscale = False, cmapsv = cmc.oslo_r, **kwargs):
 
     fig, ax = plt.subplots(1,3, figsize = (20,4))
 
-    plotLocalParamCth(ax[0], theta, logscale = logscale, cmap = cmapsv)
-    plotLocalParamCod(ax[1], theta, logscale = logscale, cmap = cmapsv)
+    plotLocalParamCth(ax[0], theta, logscale = logscale, cmap = cmapsv, **cth_kwargs)
+    plotLocalParamCod(ax[1], theta, logscale = logscale, cmap = cmapsv, **cod_kwargs)
     if logscale:
         plotLocalParam2d(ax[2], theta.where(theta >0), norm = mpl.colors.LogNorm(),
                          **kwargs
@@ -363,7 +378,7 @@ def plot_distribution_next_cloud(df,
     if ML:
         param_norm = me.fitNormal(df.d_t_next)
         # (alpha, beta), conv_b = fitBetaCTH(df_temp.h_t_next)
-        param_bm, conv_mb = me.fitMixBetaCTH(df.h_t_next)
+        param_bm, conv_mb = mod.fitMixBetaCTH(df.h_t_next)
         
         # plotCTHBeta(ax[0], *theta[0:2])
         plotCTHBetaMix(ax[0], *param_bm)
@@ -374,88 +389,82 @@ def plot_distribution_next_cloud(df,
         
     return fig, ax
 
-# def plot_distribution_next_cloud(df, 
-#                                  title = None, 
-#                                  nbins = 50, 
-#                                  mixture = False,
-#                                  ML = True,
-#                                  **kwargs):
-#     fig, ax = plt.subplots(1,3,figsize = (20, 4))
-#     # histograms
-#     ax[0].hist(df.h_t_next * 1e-3, bins = nbins, **kwargs)
-#     ax[1].hist(df.d_t_next, bins = nbins, **kwargs)
-#     converged = 'unknown'
-#     # ML likelihood fits
-    
-    
-#     if (ML == True) and (len(df)>= 10):
-#         dx = .01
-#         x = np.arange(0, 1, dx)
-#         x_h = ml.UnitInttoCTH(x) * 1e-3
-#         dx_h = x_h[1] - x_h[0]        
-#         if mixture:
-#             param, converged = mod.fitMixBetaCTH(df.h_t_next)
-#             print('converged = ', converged)
-#             if converged:
-#                 p = param[-1]
 
-#                 if p > 1:
-#                     p = 1
-#                 elif p < 0:
-#                     p = 0
-#                 param[-1] = p
-                            
-#                 ax[0].plot(x_h,  ml.pdf_bmix(x, *param) / (ml.h_max * 1e-3), 
-#                             label = f'Maximum likelihood BetaMix \np = {p:.2f}\n'
-#                             f'$\\alpha_1$ = {param[0]:.2f}\n'\
-#                             f'$\\beta_1$ = {param[1]:.2f}\n'\
-#                             f'$\\alpha_2$ = {param[2]:.2f}\n'\
-#                             f'$\\beta_2$ = {param[3]:.2f}')
-#                 ax[0].legend()
-#             else:
-#                 print ('bad convergence')
+cmap = plt.cm.jet  # define the colormap
+# extract all colors from the .jet map
+cmaplist = [cmap(i) for i in np.linspace(0, 1, 11)]
+
+# force the first color entry to be grey
+cmaplist[0] = (.5, 0.5, .5, .8)
+cmaplist[1] = (13/255, 0/255, 181/255, .8)
+
+cmaplist[2] = (215/255, 73/255, 255/255, .8)
+cmaplist[3] = (141/255, 96/255, 255/255, .8)
+cmaplist[4] = (134/255, 162/255, 255/255, .8)
+
+cmaplist[5] = (229/255, 138/255, 255/255, .8)
+cmaplist[6] = (176/255, 146/255, 255/255, .8)
+cmaplist[7] = (188/255, 204/255, 255/255, .8)
+
+cmaplist[8] = (240/255, 188/255, 255/255, .8)
+cmaplist[9] = (220/255, 206/255, 255/255, .8)
+cmaplist[10] = (1, 1, 1, .8)
+
+# create the new map
+cmap = mpl.colors.LinearSegmentedColormap.from_list(
+    'Custom cmap', cmaplist)
+
+# define the bins and normalize
+bounds = np.linspace(-.5, 10.5, 12)
+cmap_norm = mpl.colors.BoundaryNorm(bounds, 11)
+
+levels = np.arange(11)
+
+
+def plotCT(image, cmap = cmap, norm = cmap_norm, **kwargs):
+
+    fig, ax = plt.subplots(figsize = (14, 8))
+    im = image.astype(int).where(
+            image >= 0, 0).plot(x = 'i', y = 'j',
+                                cmap = cmap,
+                                norm = norm,
+                                add_colorbar = False,
+                                 **kwargs )
+    cbar = fig.colorbar(im, ticks = levels)
+    cbar.ax.set_yticklabels(util.ISCCP_classes.values())                                                  
+    plt.axis('equal')
+    plt.show()
+    return fig
+
+def plotCloudFrac(X, t = None):
+    if t.any() is None:
+        t = X.t
         
-#         else: 
-#             param, converged = mod.fitBetaCTH(df.h_t_next)
-#             ax[0].plot(x_h,  ml.pdf_b(x, *param) / dx_h, 
-#                             label = 'Maximum likelihood Beta')
-#             ax[0].legend()
-        
-#         x_d = np.linspace(*dlim)
-#         mu, sigma = mod.fitNormal(df.d_t_next)
-#         d_fit = ml.pdf_norm(x_d, mu, sigma)
-#         ax[1].plot(x_d, d_fit, label = 'Maximum likelihood Normal \n'\
-#                                        f'$\\mu$ = {mu:.2f}\n'\
-#                                        f'$\\sigma$ = {sigma:.2f}')
-#         ax[1].legend()
-#     # titles etc.
-#     ax[0].set_title(f'CTH (km) | converged {converged}')
-#     ax[0].set_xlim(hlim)
-#     ax[1].set_title('COD (log($\cdot$)')
-#     ax[1].set_xlim(dlim)
+    colors =  list(mcolors.TABLEAU_COLORS.values())
+    names = list(util.ISCCP_classes.values())
     
-#     # joint density
-#     bins = [nbins, nbins]
-#     h = ax[2].hist2d(df.d_t_next, df.h_t_next*1e-3, bins=bins, 
-#                      cmap=plt.cm.Blues,
-#                        norm=mpl.colors.LogNorm(),
-#                      **kwargs)
-#     ax[2].set_xlabel('COD (log($\cdot$)')
-#     ax[2].set_ylabel('CTH (km)')
-#     ax[2].set_xlim(dlim)
-#     ax[2].set_ylim(hlim)
-#     plt.colorbar(h[3], ax=ax[2])
-
-#     # ax[2].set_colorbar()
+    cf = X.cf.data
+    sigma_cf = X.sigma_cf.data
     
-#     if title != None:
-#         fig.suptitle(title)
-#     return fig, ax
-
+    fig = plt.figure(figsize = (8, 5))
+    for cloud_type in range(1, 11):
+        plt.plot(t, cf[:, cloud_type], label = names[cloud_type], c = colors[cloud_type - 1])
+        plt.plot(t, cf[:, cloud_type] + sigma_cf[:, cloud_type], '--', c = colors[cloud_type - 1], alpha = .5)
+        plt.plot(t, cf[:, cloud_type] - sigma_cf[:, cloud_type], '--', c = colors[cloud_type - 1], alpha = .5)
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.xlabel('Time (h)')
+    plt.ylabel('Cloud fraction')
+    plt.tight_layout()
+    return fig
 
 
 # main
 if __name__ == "__main__":
+    import xarray as xr
+    x = xr.open_dataset("../data/simulation/model1/sim_n=19_441x322_cf.nc")
+    plotCloudFrac(x)
+    
+    
     with open(input_file) as f:
         input = dict([line.split() for line in f])
     
@@ -516,316 +525,6 @@ if __name__ == "__main__":
                                             density = True )
     fig.savefig(loc_fig + 'clear_sky_to_cloud_distr.png')
 
-    
-    # # cloud to cloud overview
-    
-    # fig, ax = plt.subplots(2,3,figsize = (15, 7))
-    # # cth
-    # ax[0,0].hist(df_cc.h_t * 1e-3, bins = 50, density = True)
-    # ax[0,0].set_title('CTH (km)')
-    # ax[0,1].hist(df_cc.dh * 1e-3, bins = 200, density = True)
-    # ax[0,1].set_title('$\Delta$CTH (km)')
-    # ax[0,2].hist(df_cc.dh * 1e-3, bins = 200, density = True)
-    # ax[0,2].set_title('$\Delta$CTH (km) zoomed')
-    # ax[0,2].set(xlim = [-2, 2])
-    # ax[1,0].hist(df_cc.d_t, bins = 50, density = True)
-    # ax[1,0].set_title('COD ($\cdot$)')
-    # ax[1,1].hist(df_cc.dd, bins = 100, density = True)
-    # ax[1,1].set_title('$\Delta$COD ($\cdot$)')
-    # ax[1,2].hist(df_cc.dd, bins = 100, density = True)
-    # ax[1,2].set_title('$\Delta$COD zoomed')
-    # ax[1,2].set(xlim = [-2, 2])
-    # fig.suptitle('Cloud to Cloud')
-    # fig.savefig(loc_fig + 'cloud_to_cloud_overview.png')
-
-
-    
-#     # cloud to cloud distribution from a few bins
-    
-#     mu_h = [1e3, 6e3, 9e3, 12e3] #
-#     mu_d = [0, 1, 2, 3]
-    
-
-#     bins, (bincenter_h, bincenter_d) = state_bins(mu_h, mu_d)
-    
-#     for i, b in zip(range(len(bins)), bins):       
-#         print(b)
-#         # filter cloud to cloud on from within bin
-#         df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
-#                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])]
-
-#         if len(df_temp) <= 1:
-#             print('not enough data')
-            
-#             continue
-        
-#         title = f'Bin centre (h, d) = ({bincenter_h[i]*1e-3} km, {bincenter_d[i]}), n = {len(df_temp)}'
-#         fig, ax = plot_distribution_next_cloud(df_temp, title = title, density = True)
-#         ax[0].axvline(bincenter_h[i]*1e-3, color = 'r', label = 'bin center')
-#         ax[0].legend()
-#         ax[1].axvline(bincenter_d[i], color = 'r', label = 'bin center')
-#         ax[1].legend()
-#         ax[2].plot(bincenter_d[i], bincenter_h[i]*1e-3,'ro', label = 'bin center')
-#         ax[2].legend()
-#         fig.savefig(f'{loc_fig}cloud_to_cloud_(h_d)_({bincenter_h[i]*1e-3}_{bincenter_d[i]}).png')
-#         plt.show()
-        
-#     plt.close('all')
-        
-#     # cod estimators normal distribution
-#     dh = 500
-#     dd = .7
-#     mu_h = np.arange(1e3, 14e3, dh) # m
-#     mu_d = np.arange(0, 4, dd)
-#     n_h = len(mu_h)
-#     n_d = len(mu_d)
-#     mu_h_ = np.append(mu_h - dh/2, mu_h.max() + dh/2) ## for pcolormesh
-#     mu_d_ = np.append(mu_d - dd/2, mu_d.max() + dd/2) ## for pcolormesh
-    
-#     bins, bin_center = state_bins(mu_h, mu_d)
-#     mu_hat = np.zeros((len(mu_h) * len(mu_d)))
-#     sigma_hat = np.zeros((len(mu_h) * len(mu_d)))
-#     n_clouds = np.zeros((len(mu_h) *len(mu_d)))
-    
-#     cth_params = np.zeros((n_h * n_d , 2))
-#     cth_conv_flag = np.zeros((n_h * n_d,1))
-    
-#     for i, b in zip(range(len(bins)), bins):
-#         # filter cloud to cloud on from within bin
-#         df_temp = df_cc.loc[(df_cc.h_t > b[0][0]) & (df_cc.h_t < b[0][1])
-#                             & (df_cc.d_t > b[1][0]) & (df_cc.d_t < b[1][1])] 
-#         df_temp = df_temp.copy()
-#         n = len(df_temp)
-#         n_clouds[i] = n
-
-#         if n <= 1:
-#             mu_hat[i] = np.nan
-#             sigma_hat[i] = np.nan
-#             cth_params[i] = np.nan
-#             continue
-#         mu_hat[i] = df_temp.d_t_next.mean()
-#         sigma_hat[i] = np.sqrt(n / (n-1) * df_temp.d_t_next.var())
-        
-        
-#         if n <= 9:
-#             cth_params[i] = np.nan
-#             continue
-        
-#         h_ = ml.CTHtoUnitInt(df_temp.h_t_next)
-#         if len(h_) > 1e4:
-#             h_ = h_.sample(int(1e4))
-#         cth_ml_manual = ml.MyBetaML(h_, h_).fit(
-#                 start_params = [1, 1])
-#         if cth_ml_manual.mle_retvals['warnflag']:
-#             print(f'Bad convergence bin {b}, estimates {cth_ml_manual.params}')
-        
-#         cth_params[i] = cth_ml_manual.params
-#         cth_conv_flag[i] = cth_ml_manual.mle_retvals['warnflag']
-        
-    
-#     df_cth_param = pd.DataFrame(np.hstack([cth_params, cth_conv_flag]),
-#                                 columns = ['alpha1', 
-#                                            'beta1', 
-#                                            # 'alpha2', 
-#                                            # 'beta2', 
-#                                            # 'p', 
-#                                            'flag'])
-#     df_cth_param.to_csv(loc_fig + 'cth_param_singlebeta.csv')
-
-    
-#     mu_hat = mu_hat.reshape((len(mu_d), len(mu_h)))
-#     sigma_hat = sigma_hat.reshape((len(mu_d), len(mu_h)))
-#     n_clouds = n_clouds.reshape((len(mu_d), len(mu_h)))
-    
-    
-#     # ## ml estimation
-#     # df_cc['constant'] = 1
-#     # df_cc['hd'] = df_cc.h_t * df_cc.d_t
-#     # sm_ml_manual = ml.MyDepNormML(df_cc.d_t_next,df_cc[['constant','h_t', 'd_t', 'hd']]).fit(
-#     #                     start_params = [1, .001, 0.9, 0, .7, .001])
-#     # print(sm_ml_manual.summary())
-#     # beta = sm_ml_manual.params[:4]
-#     # gamma = sm_ml_manual.params[-2:]
-    
-#     h_labels = [f'cth = {h * 1e-3} km' for h in mu_h]
-    
-#     color= cm.Blues(np.linspace(.2,1, len(mu_h)))
-#     color_ml= cm.Greens(np.linspace(.2,1, len(mu_h)))
-    
-    
-# # # =============================================================================
-# # #     COD - Estimators for mu and sigma
-# # # =============================================================================
-# #     fig, ax = plt.subplots(1, 2, figsize = (15, 5))
-# #     ax[0].plot(mu_d, mu_d, label = 'bin center', c = 'r')
-    
-# #     for i, c, c_ml, label in zip(range(n_h), color, color_ml, h_labels):
-# #         ax[0].plot(mu_d, mu_hat[:,i], label = label, c = c,
-# #                    # marker = '.', ls = '--'
-# #                    )
-# #         # ax[0].plot(mu_d, )
-# #         ax[1].plot(mu_d, sigma_hat[:,i], label = label, c = c,
-# #                    # marker = '.', ls = '--'
-# #                    )
-
-# #     ax[0].legend()
-# #     ax[0].set(xlabel = 'Current state COD (log($\cdot$)',
-# #               ylabel = '$\hat{\mu_d}$',
-# #               title = 'Mean')
-    
-# #     ax[1].legend()
-# #     ax[1].set(xlabel = 'Current state COD (log($\cdot$)',
-# #               ylabel = '$\hat{\sigma_d}$',
-# #               title = 'Variance')
-# #     fig.suptitle('Estimators of time distribution COD')
-# #     fig.savefig(loc_fig + 'estimator_COD_local.png')
-    
-    
-# #     fig, ax = plt.subplots(1, 2, figsize = (15, 5))
-
-# #     im = ax[0].pcolormesh(mu_d_, mu_h_, mu_hat.T, cmap = cm.Blues)
-# #     plt.colorbar(im, ax=ax[0],label = '$\hat{\mu_d}$')
-
-# #     im = ax[1].pcolormesh(mu_d_, mu_h_, sigma_hat.T, cmap = cm.Blues)
-# #     plt.colorbar(im, ax=ax[1],label = '$\hat{\sigma_d}$')
-
-# #     ax[0].set(xlabel = 'Current state COD (log($\cdot$)',
-# #               ylabel = 'Current state CTH (km)',
-# #               title = 'Mean')
-    
-# #     ax[1].set(xlabel = 'Current state COD (log($\cdot$)',
-# #               ylabel = 'Current state CTH (km)',
-# #               title = 'Variance')
-# #     fig.suptitle('Estimators of time distribution COD')
-# #     fig.savefig(loc_fig + 'estimator_COD_local_colormesh.png')
-    
-# # # =============================================================================
-# # #    COD - Overall maximum likelihood
-# # # =============================================================================
-# #     fig, ax = plt.subplots(1, 2, figsize = (15, 5))
-# #     ax[0].plot(mu_d, mu_d, label = 'bin center', c = 'r')
-    
-# #     for i, c, c_ml, label in zip(range(n_h), color, color_ml, h_labels):
-# #         if i % 3 == 0:
-# #             ax[0].plot(mu_d, mu_hat[:,i], label = label, c = c,
-# #                        # marker = '.', 
-# #                        # ls = '--'
-# #                        )
-# #             # ax[0].plot(mu_d, )
-# #             ax[1].plot(mu_d, sigma_hat[:,i], label = label, c = c,
-# #                        # marker = '.', ls = '--'
-# #                        )
-# #             mu_ml, sigma_ml = np.array([ml.model1(mu_h[i], d, beta, gamma) for d in mu_d]).T
-# #             ax[0].plot(mu_d, mu_ml, label = label + ' ml estimator',
-# #                        c = c_ml)
-# #             ax[1].plot(mu_d, sigma_ml, label = label + ' ml estimator', c = c_ml)
-
-
-# #     ax[0].legend()
-# #     ax[0].set(xlabel = 'Current state COD (log($\cdot$)',
-# #               ylabel = '$\hat{\mu_d}$',
-# #               title = 'Mean')
-    
-# #     ax[1].legend()
-# #     ax[1].set(xlabel = 'Current state COD (log($\cdot$)',
-# #               ylabel = '$\hat{\sigma_d}$',
-# #               title = 'Variance')
-# #     fig.suptitle('Estimators of time distribution COD')
-# #     fig.savefig(loc_fig + 'estimator_COD_ML.png')
-
-
-# # =============================================================================
-# #     CTH - estimators for alpha1, beta1, alpha2, beta2, p in bins
-# # =============================================================================
-#     # fig, ax = plt.subplots(2, 3, figsize = (18, 9))
-    
-#     # alpha1, beta1, alpha2, beta2, p = [a.reshape((n_d, n_h)) for a in cth_params.T]
-#     # title = ['$\\hat{\\alpha_1}$', '$\\hat{\\beta_1}$', '$\\hat{p}$', 
-#     #          '$\\hat{\\alpha_2}$', '$\\hat{\\beta_2}$']
-    
-#     # for i, c, c_ml, label in zip(range(n_h), color, color_ml, h_labels):
-#     #     ax[0,0].plot(mu_d, alpha1[:,i], label = label, c = c,
-#     #                 marker = '*', 
-#     #                # ls = '--'
-#     #                )
-#     #     # ax[0].plot(mu_d, )
-#     #     ax[0,1].plot(mu_d, beta1[:,i], label = label, c = c,
-#     #                 marker = '*', 
-#     #                # ls = '--'
-#     #                )
-#     #     ax[0,2].plot(mu_d, p[:,i], label = label, c = c,
-#     #                 marker = '*', 
-#     #                # ls = '--'
-#     #                )
-#     #     ax[1,0].plot(mu_d, alpha2[:,i], label = label, c = c,
-#     #                 marker = '*', 
-#     #                # ls = '--'
-#     #                )
-#     #     ax[1,1].plot(mu_d, beta2[:,i], label = label, c = c,
-#     #                 marker = '*', 
-#     #                # ls = '--'
-#     #                )
-#     #     ax[1,2].plot(mu_d, alpha1[:,i], label = label, c = c)
-#     #     ax[1,2].legend()
-        
-#     # for axs, titles in zip(ax.flatten()[:-1], title):
-#     #     axs.set(xlabel = 'Current state COD (log($\cdot$)',
-#     #           # ylabel = '$\hat{\mu_d}$',
-#     #           title = titles)
-
-    
-#     # fig.suptitle('Estimators of time distribution CTH')
-#     # fig.savefig(loc_fig + 'estimator_CTH_local.png')
-    
-
-#     # fig, ax = plt.subplots(2, 3, figsize = (20, 10))
-
-#     # im = ax[0,0].pcolormesh(mu_d_, mu_h_, alpha1.T, cmap = cm.Blues)
-#     # plt.colorbar(im, ax=ax[0,0],
-#     #              # label = title[0]
-#     #              )
-
-#     # im = ax[0,1].pcolormesh(mu_d_, mu_h_, beta1.T, cmap = cm.Blues)
-#     # plt.colorbar(im, ax=ax[0,1],
-#     #              # label = title[1]
-#     #              )
-#     # im = ax[0,2].pcolormesh(mu_d_, mu_h_, p.T, cmap = cm.Blues)
-#     # plt.colorbar(im, ax=ax[0,2],
-#     #              # label = title[2]
-#     #              )
-#     # im = ax[1,0].pcolormesh(mu_d_, mu_h_, alpha2.T, cmap = cm.Blues)
-#     # plt.colorbar(im, ax=ax[1,0],
-#     #              # label = title[3]
-#     #              )
-#     # im = ax[1,1].pcolormesh(mu_d_, mu_h_, beta2.T, cmap = cm.Blues)
-#     # plt.colorbar(im, ax=ax[1,1],
-#     #              # label = title[4]
-#     #              )
-
-#     # for axs, title in zip(ax.flatten()[:-1], title):
-#     #     axs.set(xlabel = 'Current state COD (log($\cdot$)',
-#     #           ylabel = 'Current state CTH (km)',
-#     #           title = title)
-
-#     # fig.suptitle('Estimators of time distribution COD')
-#     # fig.savefig(loc_fig + 'estimator_CTH_local_colormesh.png')
-    
-# # =============================================================================
-# #     Number of points per bin 
-# # =============================================================================
-
-#     # fig, ax = plt.subplots(1,1, figsize = (15, 5))
-#     # for i, c, label in zip(range(n_h), color, h_labels):
-#     #     ax.plot(mu_d, n_clouds[:,i], label = label, c = c)
-
-#     # ax.legend()
-#     # ax.set(xlabel = 'Current state COD (log($\cdot$)',
-#     #           ylabel = 'N',
-#     #           title = 'number of data points per bin')
-    
-#     # fig.savefig(loc_fig + 'n_estimator.png')    
-    
-    
         
 
         
