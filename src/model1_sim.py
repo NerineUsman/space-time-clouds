@@ -70,7 +70,6 @@ def param_pixel(h, d, da):
     None.
 
     """
-    
     return da.sel(mu_h=xr.DataArray(h, dims="pixel"), mu_d=xr.DataArray(d, dims="pixel"), method = 'nearest')    
 
 
@@ -189,10 +188,6 @@ def step2d(image, ds_cs, ds_c):
 
     # image['z'] = (image.h == -1) * (image.d == 0)
 
-    # x_is_cs = np.isnan(x).any()
-    # if x_is_cs:
-    #     p_cs = ds_cs.theta1.data
-    # else:
         
     image = image#.sel(i = 0)
     # print(image)
@@ -202,13 +197,13 @@ def step2d(image, ds_cs, ds_c):
     z = (image.h == -1) * (image.d == 0)
     z = z.data.flatten()
     
+    
+    
+    # probability on cs
     p_cs = theta_c_to_cs(h, d, ds_c, method = 'nearest')
     p_cs[z] = ds_cs.theta1.data
-        
-#     print('x and p_cs', x, p_cs)
-    
-    # to cloud or clear sky
 
+    # cloud distribution parameters
     # cs
     cod_param_cs = ds_cs.theta3[7:9].data
     cth_param_cs = ds_cs.theta3[2:7].data
@@ -219,6 +214,7 @@ def step2d(image, ds_cs, ds_c):
     cod_param = theta_c_to_c_cod(h, d, ds_c, method = 'nearest')
     cod_param = xr.concat(cod_param, pd.Index( ['mu', 'sigma'], name = 'variable'))
     
+    # replace values for pixels with cs
     n_cs = sum(z)
     n = len(z)
     cth_param[dict(pixel = z)] = np.tile(cth_param_cs,(n_cs,1)).T
@@ -234,7 +230,7 @@ def step2d(image, ds_cs, ds_c):
     cth_param['b2'] = (['pixel'], beta.rvs(cth_param.sel(variable = 'alpha2'), cth_param.sel(variable = 'beta2')))
     h_next = ml.UnitInttoCTH(cth_param.b1.where(cth_param.mix, cth_param.b2))
     
-
+    # combine resutls of z, h, and d next and replace states for cs
     h_next = h_next.where(~z_next, -1)
     d_next = cod_param.d_next.where(~z_next, 0)
     

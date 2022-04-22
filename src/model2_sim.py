@@ -60,6 +60,7 @@ def get_param(ds, loc, method = 'nearest'): # think more about interpolation met
 #     ds_c.interpolate_na(dim = 'mu_d', method = method, fill_value = 'extrapolate')
     return ds.interp(loc, method = method, kwargs={"fill_value": "extrapolate"})
 
+
 def step_pixel(z, h, d, csf, h_bar, d_bar, ds, method = 'standard'):
     """Makes one step.
     Args:
@@ -70,7 +71,157 @@ def step_pixel(z, h, d, csf, h_bar, d_bar, ds, method = 'standard'):
         np.array (3,): updated state of the pixel (z, h, d)
     """
     
+    if method not in ('standard', 'main_beta'):
+        raise NotImplementedError("%s is unsupported: Use standard or main_beta " % method)
     
+    ## p_cs
+    if z: 
+        loc = dict(mu_csf = csf)
+        p_cs = get_param(ds.cs_p_cs, loc)
+    else: 
+        loc = dict(mu_h = h, mu_d = d, mu_csf = csf)
+        p_cs = get_param(ds.p_cs, loc)
+        h_bar = h_bar - h
+        d_bar = d_bar - d
+    
+#     print('x and p_cs', x, p_cs)
+    
+    # to cloud or clear sky
+    z_next = bernoulli.rvs(p_cs)
+    
+    if z_next: # if there is a cloud (h, d)next are not defined
+        h_next, d_next = np.nan, np.nan
+    else:     
+        if z: 
+            if csf: ## x current is a clear sky and is only surrounded by cs
+            # then h_bar and d_bar ar NaN
+                cod_param = ds.cs_csf_param_cod.data
+                cth_param = ds.cs_csf_param_cth_bm.sel(est = 'coef').data
+            else:
+
+                loc = dict(cs_mu_dN = d_bar)
+                cod_param = get_param(ds.cs_param_cod, loc).data
+                loc = dict(cs_mu_hN = h_bar)
+                cth_param = get_param(ds.cs_param_cth_bm.loc[dict(est = 'coef')], loc).data
+#             pdb.set_trace()
+        else: ## x is cloud:
+            loc = dict(mu_h = h, mu_d = d, mu_dN = d_bar)
+            cod_param = get_param(ds.param_cod, loc).data
+            loc = dict(mu_h = h, mu_d = d, mu_hN = h_bar)
+            cth_param = get_param(ds.param_cth_bm#.loc[dict(est = 'coef')]
+                                  , loc).data
+            
+#         print(cod_param.data, cth_param.data)
+        mu, sigma = cod_param
+        alpha1, beta1, alpha2, beta2, p = ml2.mixmnToab(*cth_param.data)
+        
+#         print(mu, sigma)
+        d_next = (np.random.randn(1) * sigma + mu) 
+        
+#         print(cth_param)
+        x = np.random.rand(1)
+        y1 = beta.rvs(alpha1, beta1)
+        
+        if method == 'main_beta':
+            p = 1
+        
+        if p == 1:
+            h_next = ml.UnitInttoCTH(y1)
+        else:
+            y2 = beta.rvs(alpha2, beta2)
+            u = (x < p)
+        #     print('u, y1, y2', u, y1 ,y2)
+            h_next = ml.UnitInttoCTH(u * y1 + ~u * y2)
+    
+    
+    return np.hstack([z_next, h_next, d_next])
+
+def param_pixel(da, list_of_coords_names, list_of_coords_values):
+    """
+    
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    d = {k:xr.DataArray(v, dims="pixel") for k, v in zip(list_of_coords_names, list_of_coords_values) }
+       
+    return da.sel(d, method = 'nearest')    
+
+
+
+def step_image(image, ds, method = 'standard'):
+    """Makes one step.
+    Args:
+        image has variables  h, d, (i, j)
+    Returns:
+        image with variables h, d
+    """
+    
+    
+    # calculate expl variables per pixel 
+    # z, csf, h_bar, d_bar,
+    z = (image.h == -1) * (image.d == 0)    
+    h_bar = image.h.where(image.h>0).rolling(i=3, j = 3, center=True, min_periods = 1).mean()
+    d_bar = image.d.where(image.h>0).rolling(i=3, j = 3, center=True, min_periods = 1).mean()
+    csf = z.rolling(i = 3, j = 3, center=True, min_periods = 1).mean()
+    
+                  
+    # having all values, the order doesn't matter anymore for drawing the next 
+    # time step
+    h = image.h.data.flatten()
+    d = image.d.data.flatten()                
+    z = z.data.flatten()
+    h_bar = h_bar.data.flatten()
+    d_bar = d_bar.data.flatten()
+    csf = csf.data.flatten()
+    
+    # probability on cs
+    param_pixel(ds.p_cs, ['mu_h', 'mu_d', 'mu_csf'], [h, d, csf])
+    p_cs = theta_c_to_cs(h, d, h_bar, d_bar, csf, ds_c, method = 'nearest')
+    p_cs[z] = ds_cs.theta1.data
+
+    # cloud distribution parameters
+    # cs
+    cod_param_cs = ds_cs.theta3[7:9].data
+    cth_param_cs = ds_cs.theta3[2:7].data
+
+    # c
+    cth_param = theta_c_to_c_cth(h, d, ds_c, method = 'nearest')
+    cth_param = xr.concat(cth_param, pd.Index( ['alpha1', 'beta1', 'alpha2', 'beta2', 'p'], name = 'variable'))
+    cod_param = theta_c_to_c_cod(h, d, ds_c, method = 'nearest')
+    cod_param = xr.concat(cod_param, pd.Index( ['mu', 'sigma'], name = 'variable'))
+    
+    # replace values for pixels with cs
+    n_cs = sum(z)
+    n = len(z)
+    cth_param[dict(pixel = z)] = np.tile(cth_param_cs,(n_cs,1)).T
+    cod_param[dict(pixel = z)] = np.tile(cod_param_cs,(n_cs,1)).T
+    
+    # draw next step    
+    z_next = bernoulli.rvs(p_cs).astype(bool)
+    
+    cod_param['d_next'] =(['pixel'], norm.rvs(loc = cod_param.sel(variable = 'mu'), scale = cod_param.sel(variable = 'sigma')))
+    
+    cth_param['mix'] = (['pixel'], bernoulli.rvs(cth_param.sel(variable = 'p')))
+    cth_param['b1'] = (['pixel'], beta.rvs(cth_param.sel(variable = 'alpha1'), cth_param.sel(variable = 'beta1')))
+    cth_param['b2'] = (['pixel'], beta.rvs(cth_param.sel(variable = 'alpha2'), cth_param.sel(variable = 'beta2')))
+    h_next = ml.UnitInttoCTH(cth_param.b1.where(cth_param.mix, cth_param.b2))
+    
+    # combine resutls of z, h, and d next and replace states for cs
+    h_next = h_next.where(~z_next, -1)
+    d_next = cod_param.d_next.where(~z_next, 0)
+    
+    image = image.copy(deep = True)
+    image.h[:] = h_next.data.reshape(*image.h.shape)    
+    image.d[:] = d_next.data.reshape(*image.h.shape)    
+    
+    return image.copy(deep = True)    
     if method not in ('standard', 'main_beta'):
         raise NotImplementedError("%s is unsupported: Use standard or main_beta " % method)
     
@@ -150,7 +301,7 @@ def neighborhood(ds, i, j,
     
     return N
 
-def simulation(T, X0, **kwargs):
+def simulation(T, X0, ds, **kwargs):
     X = X0.copy(deep = True)
     t = 0
     for t in range(T):
@@ -160,7 +311,10 @@ def simulation(T, X0, **kwargs):
         else:
             Xt = X.sel(t = t)
         X_next = X0.copy(deep = True)
-        for i, j in itertools.product(Xt.i.data, Xt.j.data):
+        
+        I, J = np.arange(*X0.i.shape), np.arange(*X0.j.shape)
+        
+        for i, j in itertools.product(I, J):
             N = neighborhood(Xt, i, j)
             pix = dict(i = i, j = j)
             y = [Xt.z[pix], Xt.h[pix], Xt.d[pix], 
@@ -174,15 +328,46 @@ def simulation(T, X0, **kwargs):
                 continue
             x_next = step_pixel(*y, ds, **kwargs)
     #         print('x_n =',x_next)
-            X_next.z.loc[pix] = x_next[0]
-            X_next.h.loc[pix] = x_next[1]
-            X_next.d.loc[pix] = x_next[2]
+            X_next.z[pix] = x_next[0]
+            X_next.h[pix] = x_next[1]
+            X_next.d[pix] = x_next[2]
         #     X_next.loc[pix]
         X_next['t'] = t+1
         X = xr.concat([X, X_next], dim = 't')
         X_next = None
     return X
 
+def sim_model2(x0, steps, ds,
+                       init_cond='random', impulse_pos='center'):
+    """Generate the state of an elementary cellular automaton after a pre-determined
+    number of steps starting from some random state.
+    Args:
+        rule_number (int): the number of the update rule to use
+        size (int): number of cells in the row
+        steps (int): number of steps to evolve the automaton
+        init_cond (str): either `random` or `impulse`. If `random` every cell
+        in the row is activated with prob. 0.5. If `impulse` only one cell
+        is activated.
+        impulse_pos (str): if `init_cond` is `impulse`, activate the
+        left-most, central or right-most cell.
+    Returns:
+        np.array: final state of the automaton
+    """
+    
+    x = x0.copy(deep = True)
+    x['t'] = 0
+    
+    for i in range(steps):
+        print(i)
+        if i > 0:
+            x_prev = x.sel(t = i)
+        else:
+            x_prev = x
+        x_next = step_image(x_prev, ds)
+        x_next['t'] = i + 1
+        x = xr.concat((x, x_next), dim = 't' )
+    print('finished')
+    return x
 
 # main
 if __name__ == "__main__":
@@ -250,50 +435,21 @@ if __name__ == "__main__":
 #     Generate X0
 # =============================================================================
     
-    with open(loc_clean_data + 'clean_dates.pickle', 'rb') as f:
-        dates = pickle.load(f)
-    
-    # print(dates)
-    date = dates.date
-    
-    start_date = datetime.strptime('10-12-2020', '%d-%m-%Y')
-    end_date = datetime.strptime('11-12-2020', '%d-%m-%Y')
-    idx = (start_date < date)  & (date < end_date) 
-    
-    dates = dates[idx].reset_index(drop = True)
-    
-    file = dates.file_name.loc[0]
-    images = xr.open_dataset(file)
-    images
-    
-    # Only keep points which are in the right area and do contain a wind speed
-    dss = []
-    for file in dates.file_name:
-        images = xr.open_dataset(file)
-        dss.append(images)
-    
-    images = xr.concat(dss, 't')
-    
-    invalid =np.sum(images.ct == 0, axis = (1,2))
-    images = images.where(invalid < 10000, drop = True)
-    
-    images = images.rename(dict(x = 'i', y = 'j'))
-    images = images.rename(dict(cth = 'h', cod = 'd'))
-    
-    images['i'] = range(len(images.i))
-    images['j'] = range(len(images.j))
-    images['d'] = np.log(images.d)
-    images['z'] = (['t', 'i', 'j'], np.select([images.ct == 1, images.ct > 1], [1, 0], np.nan))
-    images['z'] = images.z.where(~np.isnan(images.d) & ~np.isnan(images.h) )
-    images = images.where(images.z == 0)
-    
+    image = xr.open_dataset('../data/start_image0.nc')
+    N = 10
     
 # =============================================================================
 #     Simulation
 # =============================================================================
 
-    X0 = images.sel(t = images.t[0], i = images.i[:N], j = images.j[:N])
+    X0 = image.isel(i = np.arange(N), j = np.arange(N))
     X0['t'] = 0
-    X = simulation(T, X0, method = method)
+    X = sim_model2(X0, 5, ds)
     
-    X.to_netcdf(loc_sim + f'simulation2_{method}_T{T}_N{N}_{file.rsplit("/")[-1]}')
+    X.to_netcdf(loc_sim + f'simulation2_{method}_T{T}_N{N}')
+    
+    
+    
+    
+    
+    
