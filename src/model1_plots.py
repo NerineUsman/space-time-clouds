@@ -421,20 +421,38 @@ cmap_norm = mpl.colors.BoundaryNorm(bounds, 11)
 levels = np.arange(11)
 
 
-def plotCT(image, cmap = cmap, norm = cmap_norm, **kwargs):
 
-    fig, ax = plt.subplots(figsize = (14, 8))
+def plotCT(image, ax = None,
+                  xcoord = 'i', 
+                  ycoord = 'j', 
+                  cmap = cmap, norm = cmap_norm, 
+                  xlim = None,
+                  ylim = None,
+                  figsize = (14,8), 
+                  equal_axis = True, 
+                  add_colorbar = True,
+                  **kwargs):
+    if ax is None:
+        fig, ax = plt.subplots(figsize = figsize)
+
+
     im = image.astype(int).where(
-            image >= 0, 0).plot(x = 'i', y = 'j',
+            image >= 0, 0).plot(ax = ax, 
+                                x = xcoord, y = ycoord,
                                 cmap = cmap,
                                 norm = norm,
                                 add_colorbar = False,
-                                 **kwargs )
-    cbar = fig.colorbar(im, ticks = levels)
-    cbar.ax.set_yticklabels(util.ISCCP_classes.values())                                                  
-    plt.axis('equal')
-    plt.show()
-    return fig
+                                xlim = xlim,
+                                ylim  =ylim,
+                                 **kwargs )   
+    if add_colorbar:
+        cbar = fig.colorbar(im, ticks = levels)
+        cbar.ax.set_yticklabels(util.ISCCP_classes.values())      
+        
+    if equal_axis:
+        plt.axis('equal')
+
+    return fig, ax
 
 def plotCloudFrac(X, t = None):
     if t.any() is None:

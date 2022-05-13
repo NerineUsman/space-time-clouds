@@ -15,7 +15,7 @@ import pickle
 from datetime import datetime 
 
 import sys, os
-from scipy.stats import beta, bernoulli
+from scipy.stats import beta, bernoulli, norm
 
 sys.path.insert(0, './space-time-clouds/lib')
 sys.path.insert(0, '../lib/')
@@ -98,7 +98,6 @@ def step_pixel(z, h, d, csf, h_bar, d_bar, ds, method = 'standard'):
                 cod_param = ds.cs_csf_param_cod.data
                 cth_param = ds.cs_csf_param_cth_bm.sel(est = 'coef').data
             else:
-
                 loc = dict(cs_mu_dN = d_bar)
                 cod_param = get_param(ds.cs_param_cod, loc).data
                 loc = dict(cs_mu_hN = h_bar)
@@ -162,11 +161,14 @@ def step_image(image, ds, method = 'standard'):
     Returns:
         image with variables h, d
     """
+    if method not in ('standard', 'main_beta', 'main_beta_8'):
+        raise NotImplementedError("%s is unsupported: Use standard or main_beta " % method)
     
-    
+    image = image.copy(deep = True)
+
     # calculate expl variables per pixel 
     # z, csf, h_bar, d_bar,
-    z = (image.h == -1) * (image.d == 0)    
+    z = (image.h == -1) * (image.d == 0)   
     h_bar = image.h.where(image.h>0).rolling(i=3, j = 3, center=True, min_periods = 1).mean()
     d_bar = image.d.where(image.h>0).rolling(i=3, j = 3, center=True, min_periods = 1).mean()
     csf = z.rolling(i = 3, j = 3, center=True, min_periods = 1).mean()
@@ -177,115 +179,76 @@ def step_image(image, ds, method = 'standard'):
     h = image.h.data.flatten()
     d = image.d.data.flatten()                
     z = z.data.flatten()
-    h_bar = h_bar.data.flatten()
-    d_bar = d_bar.data.flatten()
+    h_bar = h_bar.data.flatten() - h
+    d_bar = d_bar.data.flatten() - d
     csf = csf.data.flatten()
     
     # probability on cs
-    param_pixel(ds.p_cs, ['mu_h', 'mu_d', 'mu_csf'], [h, d, csf])
-    p_cs = theta_c_to_cs(h, d, h_bar, d_bar, csf, ds_c, method = 'nearest')
-    p_cs[z] = ds_cs.theta1.data
-
+    # from cs
+    cs_p_cs = param_pixel(ds.cs_p_cs, ['mu_csf'], [csf])
+    
+    # from cloud
+    p_cs = param_pixel(ds.p_cs, ['mu_h', 'mu_d', 'mu_csf'], [h, d, csf])
+    # combine    
+    p_cs  = p_cs.where(~z, cs_p_cs)
+    
     # cloud distribution parameters
-    # cs
-    cod_param_cs = ds_cs.theta3[7:9].data
-    cth_param_cs = ds_cs.theta3[2:7].data
+    # from cs
+    cod_param_cs = param_pixel(ds.cs_param_cod, ['cs_mu_dN'], [d_bar])
+    cth_param_cs = param_pixel(ds.cs_param_cth_bm, ['cs_mu_hN'], [h_bar])
 
-    # c
-    cth_param = theta_c_to_c_cth(h, d, ds_c, method = 'nearest')
-    cth_param = xr.concat(cth_param, pd.Index( ['alpha1', 'beta1', 'alpha2', 'beta2', 'p'], name = 'variable'))
-    cod_param = theta_c_to_c_cod(h, d, ds_c, method = 'nearest')
-    cod_param = xr.concat(cod_param, pd.Index( ['mu', 'sigma'], name = 'variable'))
-    
+    # from c
+    cod_param = param_pixel(ds.param_cod, ['mu_h', 'mu_d', 'mu_dN'], [h, d, d_bar])
+    cod_param['valid'] = (['pixel'], ~np.isnan(d_bar) )
+    cth_param = param_pixel(ds.param_cth_bm, ['mu_h', 'mu_d', 'mu_hN'], [h, d, h_bar])
+
+
     # replace values for pixels with cs
-    n_cs = sum(z)
-    n = len(z)
-    cth_param[dict(pixel = z)] = np.tile(cth_param_cs,(n_cs,1)).T
-    cod_param[dict(pixel = z)] = np.tile(cod_param_cs,(n_cs,1)).T
+    if z.sum() > 0 :
+        cod_param[dict(pixel = z)] = cod_param_cs[dict(pixel = z)]
+        cth_param[dict(pixel = z)] = cth_param_cs[dict(pixel = z)]
+        
+        n_cs = (csf == 1).sum()
+        cod_param[dict(pixel = (csf ==1))] = np.tile(ds.cs_csf_param_cod,(n_cs,1))
+        cth_param[dict(pixel = (csf ==1))] = np.tile(ds.cs_csf_param_cth_bm,(n_cs,1))
     
+
     # draw next step    
     z_next = bernoulli.rvs(p_cs).astype(bool)
     
-    cod_param['d_next'] =(['pixel'], norm.rvs(loc = cod_param.sel(variable = 'mu'), scale = cod_param.sel(variable = 'sigma')))
+    cod_param['d_next'] =(['pixel'], norm.rvs(loc = cod_param.sel(var_cod = 'mu'), scale = cod_param.sel(var_cod = 'sigma')))
     
-    cth_param['mix'] = (['pixel'], bernoulli.rvs(cth_param.sel(variable = 'p')))
-    cth_param['b1'] = (['pixel'], beta.rvs(cth_param.sel(variable = 'alpha1'), cth_param.sel(variable = 'beta1')))
-    cth_param['b2'] = (['pixel'], beta.rvs(cth_param.sel(variable = 'alpha2'), cth_param.sel(variable = 'beta2')))
+    alpha1, beta1, alpha2, beta2, p = ml2.mixmnToab(cth_param.sel(var_cth_bm = 'mu1'), 
+                                                    cth_param.sel(var_cth_bm = 'nu1'), 
+                                                    cth_param.sel(var_cth_bm = 'mu2'), 
+                                                    cth_param.sel(var_cth_bm = 'nu2'), 
+                                                    cth_param.sel(var_cth_bm = 'p'))
+    cth_param['mix'] = (['pixel'], bernoulli.rvs(cth_param.sel(var_cth_bm = 'p')))
+    cth_param['b1'] = (['pixel'], beta.rvs(alpha1, beta1))
+    cth_param['b2'] = (['pixel'], beta.rvs(alpha2, beta2))
+    
+    if method == 'main_beta':
+        # only take values from the main beta
+        cth_param.mix[:] = 1
+
+    if method == 'main_beta_8':
+        # only take values from the main beta
+        cth_param['mix'] = cth_param.mix.where(cth_param.mix < .8, 1)
+    
     h_next = ml.UnitInttoCTH(cth_param.b1.where(cth_param.mix, cth_param.b2))
     
     # combine resutls of z, h, and d next and replace states for cs
     h_next = h_next.where(~z_next, -1)
     d_next = cod_param.d_next.where(~z_next, 0)
     
-    image = image.copy(deep = True)
     image.h[:] = h_next.data.reshape(*image.h.shape)    
-    image.d[:] = d_next.data.reshape(*image.h.shape)    
+    image.d[:] = d_next.data.reshape(*image.h.shape)   
+    
+    # image['cth_param'] = cth_param
     
     return image.copy(deep = True)    
-    if method not in ('standard', 'main_beta'):
-        raise NotImplementedError("%s is unsupported: Use standard or main_beta " % method)
-    
-    ## p_cs
-    if z: 
-        loc = dict(mu_csf = csf)
-        p_cs = get_param(ds.cs_p_cs, loc)
-    else: 
-        loc = dict(mu_h = h, mu_d = d, mu_csf = csf)
-        p_cs = get_param(ds.p_cs, loc)
-        h_bar = h_bar - h
-        d_bar = d_bar - d
-    
-#     print('x and p_cs', x, p_cs)
-    
-    # to cloud or clear sky
-    z_next = bernoulli.rvs(p_cs)
-    
-    if z_next: # if there is a cloud (h, d)next are not defined
-        h_next, d_next = np.nan, np.nan
-    else:     
-        if z: 
-            if csf: ## x current is a clear sky and is only surrounded by cs
-            # then h_bar and d_bar ar NaN
-                cod_param = ds.cs_csf_param_cod.data
-                cth_param = ds.cs_csf_param_cth_bm.sel(est = 'coef').data
-            else:
 
-                loc = dict(cs_mu_dN = d_bar)
-                cod_param = get_param(ds.cs_param_cod, loc).data
-                loc = dict(cs_mu_hN = h_bar)
-                cth_param = get_param(ds.cs_param_cth_bm.loc[dict(est = 'coef')], loc).data
-#             pdb.set_trace()
-        else: ## x is cloud:
-            loc = dict(mu_h = h, mu_d = d, mu_dN = d_bar)
-            cod_param = get_param(ds.param_cod, loc).data
-            loc = dict(mu_h = h, mu_d = d, mu_hN = h_bar)
-            cth_param = get_param(ds.param_cth_bm#.loc[dict(est = 'coef')]
-                                  , loc).data
-            
-#         print(cod_param.data, cth_param.data)
-        mu, sigma = cod_param
-        alpha1, beta1, alpha2, beta2, p = ml2.mixmnToab(*cth_param.data)
-        
-#         print(mu, sigma)
-        d_next = (np.random.randn(1) * sigma + mu) 
-        
-#         print(cth_param)
-        x = np.random.rand(1)
-        y1 = beta.rvs(alpha1, beta1)
-        
-        if method == 'main_beta':
-            p = 1
-        
-        if p == 1:
-            h_next = ml.UnitInttoCTH(y1)
-        else:
-            y2 = beta.rvs(alpha2, beta2)
-            u = (x < p)
-        #     print('u, y1, y2', u, y1 ,y2)
-            h_next = ml.UnitInttoCTH(u * y1 + ~u * y2)
-    
-    
-    return np.hstack([z_next, h_next, d_next])
+
 
 def neighborhood(ds, i, j,
                  n = 1 # neighbor degree
@@ -338,7 +301,7 @@ def simulation(T, X0, ds, **kwargs):
     return X
 
 def sim_model2(x0, steps, ds,
-                       init_cond='random', impulse_pos='center'):
+                       **kwargs):
     """Generate the state of an elementary cellular automaton after a pre-determined
     number of steps starting from some random state.
     Args:
@@ -360,10 +323,13 @@ def sim_model2(x0, steps, ds,
     for i in range(steps):
         print(i)
         if i > 0:
-            x_prev = x.sel(t = i)
+            x_prev = x.sel(t = i).copy(deep = True)
         else:
-            x_prev = x
-        x_next = step_image(x_prev, ds)
+            x_prev = x.copy(deep = True)
+            x_prev.h[0,0] = -1
+            x_prev.d[0,0] = 0
+            print('first step')
+        x_next = step_image(x_prev, ds, **kwargs)
         x_next['t'] = i + 1
         x = xr.concat((x, x_next), dim = 't' )
     print('finished')
@@ -382,74 +348,101 @@ if __name__ == "__main__":
     T = int(input['T'])
     method = input['method']
     
-    ds = xr.open_dataset(loc_model + 'dH=500_dD=0_5_N=5000local_param.nc')
+#     ds = xr.open_dataset(loc_model + 'dH=500_dD=0_5_N=5000local_param.nc')
 
-# =============================================================================
-#   adjust ds such that nan cases get a fill
-# =============================================================================
-    ## from cloud 
+# # =============================================================================
+# #   adjust ds such that nan cases get a fill
+# # =============================================================================
+#     ## from cloud 
 
-    # p_cs
-    n_loc = dict(n_or_val = 'n')
-    n = ds.p_cs.loc[n_loc]
+#     # p_cs
+#     n_loc = dict(n_or_val = 'n')
+#     n = ds.p_cs.loc[n_loc]
     
     
-    dummy = ds.p_cs.loc[dict(n_or_val = 'val')].where(n > 100).interpolate_na(
-        dim = 'mu_csf', method = 'zero', fill_value = 'extrapolate')
-    ds.p_cs.loc[dict(n_or_val = 'val')] = dummy
+#     dummy = ds.p_cs.loc[dict(n_or_val = 'val')].where(n > 100).interpolate_na(
+#         dim = 'mu_csf', method = 'zero', fill_value = 'extrapolate')
+#     ds.p_cs.loc[dict(n_or_val = 'val')] = dummy
     
     
-    # cod (mu, sigma)
-    n_loc = dict(var_cod = 'mu', n_or_val = 'n')
-    n = ds.param_cod.loc[n_loc]
-    ds.param_cod.loc[dict(n_or_val = 'val')] = ds.param_cod.loc[
-            dict(n_or_val = 'val')].where(n > 100)
+#     # cod (mu, sigma)
+#     n_loc = dict(var_cod = 'mu', n_or_val = 'n')
+#     n = ds.param_cod.loc[n_loc]
+#     ds.param_cod.loc[dict(n_or_val = 'val')] = ds.param_cod.loc[
+#             dict(n_or_val = 'val')].where(n > 100)
     
-    ds.param_cod.loc[dict(n_or_val = 'val')]= interpolateNN(ds.param_cod.loc[dict(n_or_val = 'val')], 'mu_dN')
-    
-    
-    # cth ()
-    n_loc = dict(var_cth_bm = 'mu1', n_or_val = 'n', est = 'coef')
-    n = ds.param_cth_bm.loc[n_loc]
-    ds.param_cth_bm.loc[dict(est = 'coef', n_or_val = 'val')] = ds.param_cth_bm.loc[dict(est = 'coef', n_or_val = 'val')].where(
-        n > 1000)
-    
-    ds.param_cth_bm.loc[dict(est = 'coef', n_or_val = 'val')] = interpolateNN(ds.param_cth_bm.loc[dict(est = 'coef', n_or_val = 'val')], 'mu_hN')
+#     ds.param_cod.loc[dict(n_or_val = 'val')]= interpolateNN(ds.param_cod.loc[dict(n_or_val = 'val')], 'mu_dN')
     
     
-    # clear sky contains nans as well for cth
-    n = ds.cs_n.sum(dim = ('cs_mu_dN', 'mu_csf'))
-    ds.cs_param_cth_bm.loc[dict(est = 'coef')] = ds.cs_param_cth_bm.sel(est = 'coef').where(n > 1000)
+#     # cth ()
+#     n_loc = dict(var_cth_bm = 'mu1', n_or_val = 'n', est = 'coef')
+#     n = ds.param_cth_bm.loc[n_loc]
+#     ds.param_cth_bm.loc[dict(est = 'coef', n_or_val = 'val')] = ds.param_cth_bm.loc[dict(est = 'coef', n_or_val = 'val')].where(
+#         n > 1000)
     
-    ds.cs_param_cth_bm.loc[dict(est = 'coef')] = interpolateNN(ds.cs_param_cth_bm.loc[dict(est = 'coef')], 'cs_mu_hN')
+#     ds.param_cth_bm.loc[dict(est = 'coef', n_or_val = 'val')] = interpolateNN(ds.param_cth_bm.loc[dict(est = 'coef', n_or_val = 'val')], 'mu_hN')
+    
+    
+#     # clear sky contains nans as well for cth
+#     n = ds.cs_n.sum(dim = ('cs_mu_dN', 'mu_csf'))
+#     ds.cs_param_cth_bm.loc[dict(est = 'coef')] = ds.cs_param_cth_bm.sel(est = 'coef').where(n > 1000)
+    
+#     ds.cs_param_cth_bm.loc[dict(est = 'coef')] = interpolateNN(ds.cs_param_cth_bm.loc[dict(est = 'coef')], 'cs_mu_hN')
     
 
-    ds = ds.loc[dict(n_or_val = 'val')]
+#     ds = ds.loc[dict(n_or_val = 'val')]
 
-    ds_temp_d = ds.param_cth_bm.sel(mu_h = ds.mu_h[ds.mu_h < 14700], est = 'coef').interpolate_na(dim = 'mu_d', method = 'nearest', fill_value="extrapolate")
-    ds['param_cth_bm'] = ds_temp_d
-    ds = ds.interpolate_na(dim = 'mu_h', method = 'nearest', fill_value="extrapolate")
+#     ds_temp_d = ds.param_cth_bm.sel(mu_h = ds.mu_h[ds.mu_h < 14700], est = 'coef').interpolate_na(dim = 'mu_d', method = 'nearest', fill_value="extrapolate")
+#     ds['param_cth_bm'] = ds_temp_d
+#     ds = ds.interpolate_na(dim = 'mu_h', method = 'nearest', fill_value="extrapolate")
     
+#     ds = ds.sel(est = 'coef')
     
+#     ds.to_netcdf(loc_model + 'paramters_without_nan.nc')
+    
+    ds = xr.open_dataset(loc_model + 'paramters_without_nan.nc').load()
 # =============================================================================
 #     Generate X0
 # =============================================================================
     
     image = xr.open_dataset('../data/start_image0.nc')
-    N = 10
+    N = len(image.i)
+    
+    
+    # image.h[:] = 2000
+    # image.d[:] = 0
+    # image.h[:] = -1
+    # T = 2
+    # method = 'standard'
+    method = 'main_beta_8'
     
 # =============================================================================
 #     Simulation
 # =============================================================================
-
-    X0 = image.isel(i = np.arange(N), j = np.arange(N))
+    
+    N = 20
+    X0 = image#.isel(i = np.arange(N), j = np.arange(N))
     X0['t'] = 0
-    X = sim_model2(X0, 5, ds)
+    X = sim_model2(X0, T, ds, method = method)
     
-    X.to_netcdf(loc_sim + f'simulation2_{method}_T{T}_N{N}')
+    # update z and ct
+    X['z'] = (X.h < 0)
+    X['ct'][:] = util.classISCCP(np.exp(X.d), X.h)
+    X['ct'] = X.ct.where(~X.z, 1)
+
+    filename = loc_sim + f'simulation2_{method}_T{T}_N{N}'
+    X.to_netcdf(filename)
     
     
     
+    X.ct.isel(
+        # i = np.arange(N), j = np.arange(N),
+              # t = [0, 4, 10 , 20]
+              ).plot(col = 't', col_wrap = 5)
+    X.d.plot(col = 't', col_wrap = 5)
     
-    
+    import matplotlib.pyplot as plt
+
+    plt.figure()
+    plt.hist(X.h.where(X.h > 0).sel(t = 1).data.flatten(), bins = 50, density = True)
     
