@@ -66,7 +66,7 @@ if __name__ == "__main__":
         input = dict([line.split() for line in f if (len(line) > 1) & (line[0] != '#') ])
     
     loc_clean_data = input['loc_clean_data']
-    loc_model2_data = input['loc_model2_data']
+    loc_model2_data = input['loc_model3_data']
     
     with open(loc_clean_data + 'clean_dates.pickle', 'rb') as f:
         dates = pickle.load(f)
