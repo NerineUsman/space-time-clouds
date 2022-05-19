@@ -37,18 +37,6 @@ if __name__ == "__main__":
     loc_model3 = input['loc_model3']
     
     
-    dh = 200
-    dd = .2
-    
-    dH = 400 
-    dD = .4
-    
-    N = 5000
-    
-    prop = {'dH' : dH, 'dD' : dD, 'N' : N }
-    
-    prop = '_'.join([f'{x}={prop[x]}' for x in prop]).replace('.' ,'_')
-    loc_model1 = loc_model3 + prop
     
     
     # combine df's from all days in model 1 data

@@ -54,6 +54,19 @@ def g(l):
             l.count(9) * 4 + \
             l.count(10) * 5 
     return score 
+
+def g_compl(l):
+    score = l.count(1) * np.exp(-1 *  1j * np.pi) + \
+            l.count(2) * np.exp(-3/4 *  1j * np.pi)+ \
+            l.count(3) * np.exp(-3/4 *  1j * np.pi)+ \
+            l.count(4) * np.exp(2/3 *  1j * np.pi) + \
+            l.count(5) * np.exp(-2/3 *  1j * np.pi) + \
+            l.count(6) * np.exp(-2/3 *  1j * np.pi)+ \
+            l.count(7) * np.exp(1/3 *  1j * np.pi) + \
+            l.count(8) * np.exp(-1/3 *  1j * np.pi) + \
+            l.count(9) * np.exp(-1/4 *  1j * np.pi) + \
+            l.count(10) * np.exp(0 *  1j * np.pi)
+    return np.round( ((np.angle(score ) / ( 2* np.pi) ) ) * 51 - .5)
     
     
     
@@ -67,6 +80,8 @@ if __name__ == "__main__":
     
     loc_clean_data = input['loc_clean_data']
     loc_model2_data = input['loc_model3_data']
+    
+    loc_model2_data += 'compl/'
     
     with open(loc_clean_data + 'clean_dates.pickle', 'rb') as f:
         dates = pickle.load(f)
@@ -217,7 +232,7 @@ if __name__ == "__main__":
                         
                         my_list = ds.ct[N].data.flatten().tolist()
                         
-                        X[(n_t + n_nanrows) * p + i, 7] = g(my_list[:4] + my_list[4+1:])                     
+                        X[(n_t + n_nanrows) * p + i, 7] = g_compl(my_list[:4] + my_list[4+1:])                     
                 else: 
                     X[(n_t + n_nanrows) * p + i, :] = np.nan # add a nan row to seperate different days/pixels
         

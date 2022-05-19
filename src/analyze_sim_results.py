@@ -54,9 +54,9 @@ def cloudFractionSD(image, N):
 if __name__ == "__main__":
     
     
-    x = xr.open_dataset('../mod/model2/sim/simulation2_main_beta_T30_N20')
-    x['ct'][:] = util.classISCCP(np.exp(x.d), x.h)
-    x['ct'] = x.ct.where(~x.z, 1)
+    x = xr.open_dataset('../data/simulation/model3/simulation3_T60')
+    # x['ct'][:] = util.classISCCP(np.exp(x.d), x.h)
+    # x['ct'] = x.ct.where(~x.z, 1)
     
     X = x.ct
     cf = np.array([cloudFraction(X.sel(t = t)) for t in x.t ])
@@ -65,5 +65,5 @@ if __name__ == "__main__":
     x['cf'] = (['t', 'classes'], cf)
     x['sigma_cf'] = (['t', 'classes'], sigma_cf)
     
-    x.to_netcdf('../mod/model2/sim/simulation2_main_beta_T30_N20_cf')
+    x.to_netcdf('../data/simulation/model3/simulation3_T60_cf')
 
