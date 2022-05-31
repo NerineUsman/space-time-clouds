@@ -20,7 +20,7 @@ import Utilities as util
 
 # variables
 src_path = os.path.dirname(os.path.realpath(__file__))
-input_file = src_path + '/input_model.txt'
+input_file = src_path + '/input_sim2.txt'
 
 # variables
 
@@ -197,6 +197,8 @@ def step2d(image, ds_cs, ds_c):
     z = (image.h == -1) * (image.d == 0)
     z = z.data.flatten()
     
+    orig_ct = image.ct.copy(deep =True)
+
     
     
     # probability on cs
@@ -238,7 +240,7 @@ def step2d(image, ds_cs, ds_c):
     image.h[:] = h_next.data.reshape(*image.h.shape)    
     image.d[:] = d_next.data.reshape(*image.h.shape)    
     
-    return image.copy(deep = True)
+    return image.copy(deep = True).where(orig_ct > 0)
 
 def sim_model1(x0, steps, ds_cs, ds_c,
                        init_cond='random', impulse_pos='center'):
@@ -280,18 +282,18 @@ if __name__ == "__main__":
         input = dict([line.split() for line in f if (len(line) > 1) & (line[0] != '#')])
         
     loc_mod = input['loc_model1']
-    loc_mod = '../mod/model1/'
-    # loc_mod = './space-time-clouds/mod/model1/'
+
     
-    loc_sim_data = '/net/labdata/nerine/space-time-clouds/data/sim/model1/'
-    loc_sim_data = '../data/simulation/model1/'
+    T = int(input['T'])
+
+    
+    loc_sim_data = input['loc_sim1']
 
 
     ds_c = xr.open_dataset(loc_mod + 'expl_local_param.nc')
     ds_cs = xr.open_dataset(loc_mod + 'glob_theta.nc')[['theta1', 'theta3']]
     
     
-    n = 6 * 6
     
     mu_h = np.linspace(0, ml.h_max, 60)
     mu_d = np.linspace(-3, 6, 50)
@@ -299,24 +301,26 @@ if __name__ == "__main__":
     
     
     
-    image = xr.Dataset(
-    data_vars=dict(
-        d=(["i", "j"], np.array([[3,2,0],[3,0,1]], dtype = float)),
-        h=(["i", "j"], np.array([[3000,200,-1],[3,-1,1]])),
-    ),
-    coords=dict(
-    ))
+    # image = xr.Dataset(
+    # data_vars=dict(
+    #     d=(["i", "j"], np.array([[3,2,0],[3,0,1]], dtype = float)),
+    #     h=(["i", "j"], np.array([[3000,200,-1],[3,-1,1]])),
+    # ),
+    # coords=dict(
+    # ))
     
-    image = xr.open_dataset('../data/start_image0.nc')
+    image = xr.open_dataset('../data/start_image.nc')
     
-    step2d(image, ds_cs, ds)
     
-    x = sim_model1(image, n, ds_cs, ds)
+    x = sim_model1(image, T, ds_cs, ds)
     
     x['z'] = (x.h < 0)
+    x['ct'][:] = util.classISCCP(np.exp(x.d), x.h)
+    x['ct'] = x.ct.where(x.h >=0, 1)
     
+    x = x.where(x.area == 1)
     
-    x.to_netcdf(loc_sim_data + f'sim_n={x.dims["t"]}_{x.dims["i"]}x{x.dims["j"]}.nc')
+    x.to_netcdf(loc_sim_data + f'sim_n={x.dims["t"]}_{x.dims["i"]}x{x.dims["j"]}')
     
     
     

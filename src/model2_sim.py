@@ -18,7 +18,7 @@ import sys, os
 from scipy.stats import beta, bernoulli, norm
 
 sys.path.insert(0, './space-time-clouds/lib')
-sys.path.insert(0, '../lib/')
+sys.path.insert(0, '../lib')
 sys.path.insert(0, '../src')
 
 
@@ -165,6 +165,7 @@ def step_image(image, ds, method = 'standard'):
         raise NotImplementedError("%s is unsupported: Use standard or main_beta " % method)
     
     image = image.copy(deep = True)
+    orig_ct = image.ct.copy(deep =True)
 
     # calculate expl variables per pixel 
     # z, csf, h_bar, d_bar,
@@ -246,7 +247,7 @@ def step_image(image, ds, method = 'standard'):
     
     # image['cth_param'] = cth_param
     
-    return image.copy(deep = True)    
+    return image.copy(deep = True).where(orig_ct > 0)  
 
 
 
@@ -405,7 +406,7 @@ if __name__ == "__main__":
 #     Generate X0
 # =============================================================================
     
-    image = xr.open_dataset('../data/start_image0.nc')
+    image = xr.open_dataset('../data/start_image.nc')
     N = len(image.i)
     
     
@@ -414,7 +415,7 @@ if __name__ == "__main__":
     # image.h[:] = -1
     # T = 2
     # method = 'standard'
-    method = 'main_beta_8'
+    # method = 'main_beta_8'
     
 # =============================================================================
 #     Simulation
@@ -423,12 +424,16 @@ if __name__ == "__main__":
     N = 20
     X0 = image#.isel(i = np.arange(N), j = np.arange(N))
     X0['t'] = 0
+    
     X = sim_model2(X0, T, ds, method = method)
     
     # update z and ct
     X['z'] = (X.h < 0)
     X['ct'][:] = util.classISCCP(np.exp(X.d), X.h)
-    X['ct'] = X.ct.where(~X.z, 1)
+    X['ct'] = X.ct.where(X.h >=0, 1)
+    
+    X = X.where(X.area == 1)
+
 
     filename = loc_sim + f'simulation2_{method}_T{T}_N{N}'
     X.to_netcdf(filename)

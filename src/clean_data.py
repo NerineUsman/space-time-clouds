@@ -23,7 +23,7 @@ import data_clean as dc
 
 # variables
 # input_file = 'input_cleandata_local.txt'
-input_file = './space-time-clouds/src/input_cleandata.txt'
+input_file = '../src/input_cleandata.txt'
 centerpoint = [5, -40] # deg lat, deg lon
 scale_lat = 111.32e3 #m
 scale_lon = 40075e3 * np.cos( centerpoint[0] * np.pi/ 180 ) / 360 #m
@@ -251,7 +251,7 @@ if __name__ == "__main__":
         points[:, 0] = ds_wind.X
         points[:, 1] = ds_wind.Y
         
-        z = ds_wind.wind_speed * np.exp(1j * ds_wind.wind_direction / 180 * np.pi)
+        z = ds_wind.wind_speed * np.exp(1j * ( ds_wind.wind_direction)/ 180 * np.pi)
 
         # interpolate
         wind = sc.interpolate.griddata(points, z, (grid_x, grid_y), method='nearest')
@@ -262,8 +262,8 @@ if __name__ == "__main__":
         
         
         
-        d = d.assign({"u" : (("x", "y"), np.real(wind)),
-                      "v" : (("x", "y"), np.imag(wind))}) 
+        d = d.assign({"u" : (("x", "y"), -np.imag(wind)),
+                      "v" : (("x", "y"), -np.real(wind))}) 
         
         d.u.attrs["units"] = "m s-1"
         d.v.attrs["units"] = "m s-1"

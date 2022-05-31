@@ -53,17 +53,30 @@ def cloudFractionSD(image, N):
     
 if __name__ == "__main__":
     
+    name0 = '../data/simulation/model0/simulation0_T100_startimage_scene_'
+    name1 = '../data/simulation/model1/sim_n=51_441x322'
+    name2 = '../data/simulation/model2/simulation2_standard_T50_N20'
+    name3 = '../data/simulation/model3/simulation3_T100_standard_startimage_scene_'
     
-    x = xr.open_dataset('../data/simulation/model3/simulation3_T60')
-    # x['ct'][:] = util.classISCCP(np.exp(x.d), x.h)
-    # x['ct'] = x.ct.where(~x.z, 1)
+    name4 = '../data/simulation/model3/simulation3_T40_standard_startimage_scene_mask_low_prob'
+    name5 = '../data/simulation/model3/simulation3_T40_compl_startimage_scene_'
+    name6 = '../data/simulation/model3/simulation3_T40_compl_startimage_scene_mask_low_prob'
     
-    X = x.ct
-    cf = np.array([cloudFraction(X.sel(t = t)) for t in x.t ])
-    sigma_cf = np.array([cloudFractionSD(X.sel(t = t), 32) for t in x.t ])
-    
-    x['cf'] = (['t', 'classes'], cf)
-    x['sigma_cf'] = (['t', 'classes'], sigma_cf)
-    
-    x.to_netcdf('../data/simulation/model3/simulation3_T60_cf')
+    for name in [name6]:
+        
+        print(name)
+        x = xr.open_dataset(name)
+        # ct_orig = x.ct.copy(deep = True)
+        # x['ct'][:] = util.classISCCP(np.exp(x.d), x.h)
+        # x['ct'] = x.ct.where(~x.z, 1).where(ct_orig > 0)
+        
+        
+        X = x.ct
+        cf = np.array([cloudFraction(X.sel(t = t)) for t in x.t ])
+        sigma_cf = np.array([cloudFractionSD(X.sel(t = t), 32) for t in x.t ])
+        
+        x['cf'] = (['t', 'classes'], cf)
+        x['sigma_cf'] = (['t', 'classes'], sigma_cf)
+        
+        x.to_netcdf(name + '_cf')
 

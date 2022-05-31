@@ -38,41 +38,7 @@ input_file = src_path + '/input_sim2.txt'
 
 # functions
 
-
-
-
-
-def w(ct):
-    h = xr.where(ct == 1, 0, 
-             xr.where(ct == 2, 1,
-                xr.where(ct == 3, 1,
-                 xr.where(ct == 4, 7, 
-                 xr.where(ct == 5, 2, 
-                      xr.where(ct == 6, 2, 
-                           xr.where(ct == 7, 6, 
-                                xr.where(ct == 8, 3, 
-                                     xr.where(ct == 9, 4, 
-                                          xr.where(ct == 10, 5, np.nan))))))))))
-
-    return h
-
-
-def w_compl(ct):
-    h = xr.where(ct == 1, np.exp(-1 *  1j * np.pi), 
-             xr.where(ct == 2, np.exp(-3/4 *  1j * np.pi),
-                xr.where(ct == 3,  np.exp(-3/4 *  1j * np.pi),
-                 xr.where(ct == 4, np.exp(2/3 *  1j * np.pi) , 
-                 xr.where(ct == 5,  np.exp(-2/3 *  1j * np.pi) , 
-                      xr.where(ct == 6, np.exp(-2/3 *  1j * np.pi), 
-                           xr.where(ct == 7, np.exp(1/3 *  1j * np.pi), 
-                                xr.where(ct == 8, np.exp(-1/3 *  1j * np.pi), 
-                                     xr.where(ct == 9,  np.exp(-1/4 *  1j * np.pi), 
-                                          xr.where(ct == 10, np.exp(0 *  1j * np.pi), np.nan))))))))))
-    
-
-    return h
-    
-    
+   
     
 
 
@@ -94,18 +60,8 @@ def step_image(image, M, method = 'standard'):
     # calculate expl variables per pixel 
     # ct, g
     
-    if method == 'standard':
-        weights = w(image.ct)
-    elif method == 'compl':
-        weights = w_compl(image.ct)
         
-        
-    g = weights.rolling(i=3, j = 3, center=True, min_periods = 1).sum() - weights
-    
-    if method == 'compl':
-        g = np.round( ((np.angle(g) / ( 2* np.pi) ) ) * 51 - .5).flatten()
-    else:
-        g = g.data.flatten()                
+           
 
         
         
@@ -114,7 +70,7 @@ def step_image(image, M, method = 'standard'):
     ct = image.ct.data.flatten()
 
     # probability on cloudtpyes
-    p = sim2.param_pixel(M, ['frm', 'g'], [ct, g])
+    p = sim2.param_pixel(M, ['frm'], [ct])
     
 
     # draw next step from uniform
@@ -178,22 +134,20 @@ if __name__ == "__main__":
     with open(input_file) as f:
         input = dict([line.split() for line in f if (len(line) > 1) & (line[0] != '#') ])
     
-    loc_model = input['loc_model3']
+    loc_model = input['loc_model1']
     
-    loc_sim = input['loc_sim3']
+    loc_sim = input['loc_sim0']
 
     N = int(input['N'])
     T = int(input['T'])
-    method = input['method']
-    method = 'standard'
-    
-    if method == 'compl':
-        loc_model = loc_model + 'compl/'
 
+
+    M = pd.read_csv(loc_model + 'expl_transition_ctypes.csv', index_col = 0)  
     
-    M = pd.read_csv(loc_model + 'transition_ctypes.csv')
-    M = M.iloc[:-1].astype({'g': 'float', 'from' : 'float'}).rename({'from': 'frm'}, axis=1)
-    M = M.set_index(['g','frm']).to_xarray()
+    M = M.iloc[:-1]
+    M.index.name = 'frm'
+    M.index = M.index.astype('float')
+    M = M.to_xarray()
     M = xr.concat([M['0.0'],
                 M['1.0'],
                 M['2.0'],
@@ -209,7 +163,8 @@ if __name__ == "__main__":
     M = M.sel(to = slice(1,10), frm = slice(1, 10))
     M = M / M.sum(dim = 'to')
     mask = ''
-    M = M**10
+    
+    
     # M = xr.where((M < .1) & (M.frm > 1), 0 , M )
     # M = xr.where((M < .08) & (M.frm == 1), 0 , M )
     
@@ -230,10 +185,17 @@ if __name__ == "__main__":
 #     Generate X0
 # =============================================================================
     
-    image = xr.open_dataset('../data/start_image.nc')
+    image = xr.open_dataset('../data/start_image0.nc')
     N = len(image.i)
-
-
+    
+    image['area'] = xr.where(image.ct >=0, 1, 0)
+    image['ct'][:] = util.classISCCP(np.exp(image.d), image.h)
+    image['ct'] = image.ct.where(image.h >=0, 1)
+    image['z'][:] = xr.where(image.h < 0, 1, 0)
+    image = image.where(image.area == 1)
+    image.to_netcdf('../data/start_image.nc')
+    
+    
     start_image = 'scene'
     
     # image.h[:] = 2000
@@ -242,7 +204,7 @@ if __name__ == "__main__":
     # image.ct[:] = 1
     # start_image = 'constant'
     
-    T = 40
+    T = 100
 
     
 # # =============================================================================
@@ -252,24 +214,24 @@ if __name__ == "__main__":
     # N = 20
     X0 = image[['ct']]#.isel(i = np.arange(N), j = np.arange(N))
     X0['t'] = 0
-    X = sim_model3(X0, T, M, method = method)
+    X = sim_model3(X0, T, M)
     
     # update z and ct
     X['z'] = (X.ct == 1)
-        
-    # filename = loc_sim + f'simulation3_T{T}_{method}_startimage_{start_image}_{mask}'#'_N{N}'
-    # X.to_netcdf(filename)
+
+    filename = loc_sim + f'simulation0_T{T}_startimage_{start_image}_{mask}'#'_N{N}'
+    X.to_netcdf(filename)
     
     
 
     N =  40    
     plot = X.ct.isel(
         # i = np.arange(N), j = np.arange(N),
-                t = [0, 1, 2, 3, 4, 10 , 20, 30, T-1]
+               t = [0, 1, 2, 3, 4, 10 , 20, 30 ,40 , 50 , 60 ,  T-1]
               ).plot(col = 't', col_wrap = 5)
     plot.fig.subplots_adjust(top=0.9, right = 0.8) # adjust the Figure in rp
-    plot.fig.suptitle(f'simulation3_T{T}_{method}_startimage_{start_image}_mask')
-    print(T, method, start_image, mask)
+    plot.fig.suptitle(f'simulation0_T{T}_startimage_{start_image}_{mask}')
+    print(T, start_image, mask)
 
 #     X.d.plot(col = 't', col_wrap = 5)
     
