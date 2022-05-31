@@ -56,5 +56,10 @@ if __name__ == "__main__":
     # states
     
 
-    T = pd.crosstab([df.g, df.ct], df.ct_next, rownames=['g', 'from'], colnames=[ 'to'], normalize = 'index', margins = True)
-    T.to_csv(loc_model3 + 'transition_ctypes.csv')
+    # T = pd.crosstab([df.g, df.ct], df.ct_next, rownames=['g', 'from'], colnames=[ 'to'], normalize = 'index', margins = True)
+    # T.to_csv(loc_model3 + 'transition_ctypes.csv')
+    
+    
+    
+    T = pd.crosstab(df.ct, df.ct_next, rownames=['from'], colnames=[ 'to'], normalize = 'index', margins = True)
+    T.to_csv(loc_model3 + 'transition_ctypes_MC.csv')
