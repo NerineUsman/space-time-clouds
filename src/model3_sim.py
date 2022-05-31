@@ -209,7 +209,7 @@ if __name__ == "__main__":
     M = M.sel(to = slice(1,10), frm = slice(1, 10))
     M = M / M.sum(dim = 'to')
     mask = ''
-    M = M**10
+
     # M = xr.where((M < .1) & (M.frm > 1), 0 , M )
     # M = xr.where((M < .08) & (M.frm == 1), 0 , M )
     
@@ -257,8 +257,8 @@ if __name__ == "__main__":
     # update z and ct
     X['z'] = (X.ct == 1)
         
-    # filename = loc_sim + f'simulation3_T{T}_{method}_startimage_{start_image}_{mask}'#'_N{N}'
-    # X.to_netcdf(filename)
+    filename = loc_sim + f'na_simulation3_T{T}_{method}_startimage_{start_image}_{mask}'#'_N{N}'
+    X.to_netcdf(filename)
     
     
 

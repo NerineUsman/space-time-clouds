@@ -57,12 +57,12 @@ if __name__ == "__main__":
     name1 = '../data/simulation/model1/sim_n=51_441x322'
     name2 = '../data/simulation/model2/simulation2_standard_T50_N20'
     name3 = '../data/simulation/model3/simulation3_T100_standard_startimage_scene_'
-    
+    name3 = '../data/simulation/model3/na_simulation3_T40_standard_startimage_scene_'
     name4 = '../data/simulation/model3/simulation3_T40_standard_startimage_scene_mask_low_prob'
     name5 = '../data/simulation/model3/simulation3_T40_compl_startimage_scene_'
     name6 = '../data/simulation/model3/simulation3_T40_compl_startimage_scene_mask_low_prob'
     
-    for name in [name6]:
+    for name in [name3]:
         
         print(name)
         x = xr.open_dataset(name)
