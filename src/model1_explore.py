@@ -173,7 +173,7 @@ def df_temp_at(df, h, d, delta_h, delta_d, N = 500, **kwargs):
 # main
 if __name__ == "__main__":
     with open(input_file) as f:
-        input = dict([line.split() for line in f])
+        input = dict([line.split() for line in f if (len(line) > 1) & (line[0] != '#')])
     
     loc_model1_data = input['loc_model1_data']
     loc_model1 = input['loc_model1']
