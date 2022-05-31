@@ -49,8 +49,8 @@ def nextLoc(ds, k, i, j
     dt = (ds.t[k+1].data - t1.data ) 
     if np.isnan(ds.u[k,i,j].data):
         raise ValueError
-    dx = ds.u[k,i,j].data * dt / np.timedelta64(1, 's') # m
-    dy = ds.v[k,i,j].data * dt / np.timedelta64(1, 's') # m
+    dx = -ds.v[k,i,j].data * dt / np.timedelta64(1, 's') # m
+    dy = -ds.u[k,i,j].data * dt / np.timedelta64(1, 's') # m
     x_new = x + dx
     y_new = y + dy
 
