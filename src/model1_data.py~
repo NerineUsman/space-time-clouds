@@ -9,17 +9,23 @@ Created on Mon Nov 29 11:05:38 2021
 
 # import modules
 import pickle
-import matplotlib.pyplot as plt
 import xarray as xr
 import numpy as np
 import pandas as pd
+import os, sys
 
 from datetime import datetime, timedelta
 
 
 # variables
-input_file = './space-time-clouds/src/input_model1.txt'
-input_file = 'input_model1_local.txt'
+input_file = './space-time-clouds/src/input_model.txt'
+sys.path.insert(0, './space-time-clouds/lib')
+sys.path.insert(0, '../lib/')
+
+
+# variables
+src_path = os.path.dirname(os.path.realpath(__file__))
+input_file = src_path + '/input_model.txt'
 
 # functions
 def daterange(start_date, end_date):
@@ -71,7 +77,7 @@ if __name__ == "__main__":
 
 
     with open(input_file) as f:
-        input = dict([line.split() for line in f])
+        input = dict([line.split() for line in f if (len(line) > 1) & (line[0] != '#') ])
     
     loc_clean_data = input['loc_clean_data']
     loc_model1_data = input['loc_model1_data']

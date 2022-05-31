@@ -81,7 +81,6 @@ if __name__ == "__main__":
     loc_clean_data = input['loc_clean_data']
     loc_model2_data = input['loc_model3_data']
     
-    loc_model2_data += 'compl/'
     
     with open(loc_clean_data + 'clean_dates.pickle', 'rb') as f:
         dates = pickle.load(f)
@@ -232,7 +231,7 @@ if __name__ == "__main__":
                         
                         my_list = ds.ct[N].data.flatten().tolist()
                         
-                        X[(n_t + n_nanrows) * p + i, 7] = g_compl(my_list[:4] + my_list[4+1:])                     
+                        X[(n_t + n_nanrows) * p + i, 7] = g(my_list[:4] + my_list[4+1:])                     
                 else: 
                     X[(n_t + n_nanrows) * p + i, :] = np.nan # add a nan row to seperate different days/pixels
         
