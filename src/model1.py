@@ -118,8 +118,8 @@ def fitMixBetaCTH(y):
 # main
 if __name__ == "__main__":
     with open(input_file) as f:
-        input = dict([line.split() for line in f])
-    
+        input = dict([line.split() for line in f if (len(line) > 1) & (line[0] != '#') ])
+      
     loc_model1_data = input['loc_model1_data']
     loc_fig = input['loc_fig']
     loc_model1 = input['loc_model1']
