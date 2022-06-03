@@ -20,7 +20,7 @@ import sys, os
 from scipy.stats import beta, bernoulli, norm, uniform
 
 sys.path.insert(0, './space-time-clouds/lib')
-sys.path.insert(0, '../lib')
+sys.path.insert(0, '../lib/')
 sys.path.insert(0, '../src')
 
 

@@ -151,9 +151,12 @@ def meanBeta(alpha, beta):
     return alpha / (alpha + beta)
 
 
-def df_temp_at(df, h, d, delta_h, delta_d, N = 500, **kwargs):
-    (b,), b_c = state_bins(h, d, delta_h = delta_h, delta_d = delta_d)
+def df_temp_at(df, h, d, delta_h0, delta_d0, N = 500, i = 0, **kwargs):
     
+    delta_h = delta_h0* ( 1  + np.log(i/10 + 1))
+    delta_d = delta_d0* ( 1  + np.log(i/10 + 1))
+    
+    (b,), b_c = state_bins(h, d, delta_h = delta_h, delta_d = delta_d)
     df_t = df.loc[(df.h_t > b[0][0]) & (df.h_t < b[0][1])
                         & (df.d_t > b[1][0]) & (df.d_t < b[1][1])] 
     df_t= df_t.copy()    
@@ -165,7 +168,13 @@ def df_temp_at(df, h, d, delta_h, delta_d, N = 500, **kwargs):
         df_t = df_t
     elif len(df_t) < N:
         # print(len(df_t), delta_h, delta_d)
-        df_t = df_temp_at(df, h, d, delta_h + 200, delta_d + .1, N = N, **kwargs)
+        df_t = df_temp_at(df, h, d, 
+                          # delta_h  + 200 * np.log(i/10 + 1),
+                           # np.sqrt( 1.2 * delta_h**2 ),
+                           delta_h0 ,
+                          delta_d0 ,
+                          N = N, i = i + 1,  **kwargs)
+        print(delta_h)
     return df_t
 
 
@@ -185,7 +194,7 @@ if __name__ == "__main__":
     dH = 400 
     dD = .4
     
-    N = 5000
+    N = 50# 00
     
     prop = {'dH' : dH, 'dD' : dD, 'N' : N }
     

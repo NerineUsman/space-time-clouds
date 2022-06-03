@@ -199,21 +199,21 @@ if __name__ == "__main__":
 #  2. Cloud to Clear sky
 # =============================================================================
     
-    df_cs['to_clear_sky'] = (df_cs.cloud_next == 'clear sky')
+    # df_cs['to_clear_sky'] = (df_cs.cloud_next == 'clear sky')
     
-    print('2. p_cs global fit')
-    ## ml estimation COD deep params
-    model1_p = ml.MyDepPcsML(df_cs.to_clear_sky,df_cs[['h_t', 'd_t']])
-    sm_ml_p = model1_p.fit()
-    df_p = pd.DataFrame(sm_ml_p._cache)
-    df_p['coef'] = sm_ml_p.params
-    df_p['names'] = model1_p.exog_names
-    df_p.to_csv(loc_model1 + 'model1_p_cs.csv')
+    # print('2. p_cs global fit')
+    # ## ml estimation COD deep params
+    # model1_p = ml.MyDepPcsML(df_cs.to_clear_sky,df_cs[['h_t', 'd_t']])
+    # sm_ml_p = model1_p.fit()
+    # df_p = pd.DataFrame(sm_ml_p._cache)
+    # df_p['coef'] = sm_ml_p.params
+    # df_p['names'] = model1_p.exog_names
+    # df_p.to_csv(loc_model1 + 'model1_p_cs.csv')
     
-    ds['theta2'] = (['c_to_cs'], sm_ml_p.params)
-    ds.theta2.attrs['var_names'] = model1_p.exog_names
+    # ds['theta2'] = (['c_to_cs'], sm_ml_p.params)
+    # ds.theta2.attrs['var_names'] = model1_p.exog_names
 
-    print(sm_ml_p.summary())
+    # print(sm_ml_p.summary())
      
 # =============================================================================
 #  3. clear sky to cloud
@@ -246,36 +246,36 @@ if __name__ == "__main__":
 #   4. cloud to cloud 
 # =============================================================================
 
-    print('4. cod global fit')
-    ## ml estimation COD deep params
-    df_cc['constant'] = 1
-    df_cc['hd'] = df_cc.h_t * df_cc.d_t
-    model1_cod = ml.MyDepNormML(df_cc.d_t_next,df_cc[['constant','h_t', 'd_t', 'hd']])
-    sm_ml_cod = model1_cod.fit(
-                        start_params = [1, .001, 0.9, 0, .7, .001])
-    df_cod = pd.DataFrame(sm_ml_cod._cache)
-    df_cod['coef'] = sm_ml_cod.params
-    df_cod['names'] = model1_cod.exog_names
-    df_cod.to_csv(loc_model1 + 'glob_c_to_c_cod.csv')
-    
-    print(sm_ml_cod.summary())
-    
-    print('4. cth global fit')
+    # print('4. cod global fit')
     # ## ml estimation COD deep params
-    # model1_cth = ml.MyDepMixBetaML(df_cc.h_t_next,df_cc[['h_t', 'd_t']])
-    # sm_ml_cth = model1_cth.fit()
-    # df_cth = pd.DataFrame(sm_ml_cth._cache)
-    # df_cth['coef'] = sm_ml_cth.params
-    # df_cth['names'] = model1_cth.exog_names
-    # df_cth.to_csv(loc_model1 + 'model1_cth.csv')
+    # df_cc['constant'] = 1
+    # df_cc['hd'] = df_cc.h_t * df_cc.d_t
+    # model1_cod = ml.MyDepNormML(df_cc.d_t_next,df_cc[['constant','h_t', 'd_t', 'hd']])
+    # sm_ml_cod = model1_cod.fit(
+    #                     start_params = [1, .001, 0.9, 0, .7, .001])
+    # df_cod = pd.DataFrame(sm_ml_cod._cache)
+    # df_cod['coef'] = sm_ml_cod.params
+    # df_cod['names'] = model1_cod.exog_names
+    # df_cod.to_csv(loc_model1 + 'glob_c_to_c_cod.csv')
     
-    # print(sm_ml_cth.summary())
+    # print(sm_ml_cod.summary())
+    
+    # print('4. cth global fit')
+    # # ## ml estimation COD deep params
+    # # model1_cth = ml.MyDepMixBetaML(df_cc.h_t_next,df_cc[['h_t', 'd_t']])
+    # # sm_ml_cth = model1_cth.fit()
+    # # df_cth = pd.DataFrame(sm_ml_cth._cache)
+    # # df_cth['coef'] = sm_ml_cth.params
+    # # df_cth['names'] = model1_cth.exog_names
+    # # df_cth.to_csv(loc_model1 + 'model1_cth.csv')
+    
+    # # print(sm_ml_cth.summary())
     
     
-    ## TODO change second ones to cth
+    # ## TODO change second ones to cth
     
-    ds['theta4'] = (['c_to_c'], np.concatenate([sm_ml_cod.params, sm_ml_cod.params]))
-    ds.theta4.attrs['var_names'] = model1_cod.exog_names + model1_cod.exog_names
+    # ds['theta4'] = (['c_to_c'], np.concatenate([sm_ml_cod.params, sm_ml_cod.params]))
+    # ds.theta4.attrs['var_names'] = model1_cod.exog_names + model1_cod.exog_names
         
     ds.to_netcdf(loc_model1 + 'glob_theta.nc')
 
