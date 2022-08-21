@@ -327,8 +327,8 @@ def sim_model2(x0, steps, ds,
             x_prev = x.sel(t = i).copy(deep = True)
         else:
             x_prev = x.copy(deep = True)
-            x_prev.h[0,0] = -1
-            x_prev.d[0,0] = 0
+            # x_prev.h[0,0] = -1
+            # x_prev.d[0,0] = 0
             print('first step')
         x_next = step_image(x_prev, ds, **kwargs)
         x_next['t'] = i + 1
@@ -421,8 +421,8 @@ if __name__ == "__main__":
 #     Simulation
 # =============================================================================
     
-    N = 20
-    X0 = image#.isel(i = np.arange(N), j = np.arange(N))
+    N = 15
+    X0 = image.isel(i = np.arange(N), j = np.arange(N))
     X0['t'] = 0
     
     X = sim_model2(X0, T, ds, method = method)
@@ -436,7 +436,9 @@ if __name__ == "__main__":
 
 
     filename = loc_sim + f'simulation2_{method}_T{T}_N{N}'
+    
     X.to_netcdf(filename)
+    print('simulation saved at: ',filename)
     
     
     

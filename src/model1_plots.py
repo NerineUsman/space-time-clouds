@@ -58,8 +58,9 @@ def plotCloudHist_f(dedges, hedges, freq,
                                  mixture = False,
                                  ML = True,
                                  cmap = cmc.batlow,
+                                 figsize =  (20, 4),
                                  **kwargs):
-    fig, ax = plt.subplots(1,3,figsize = (20, 4))
+    fig, ax = plt.subplots(1,3,figsize = figsize)
     # histograms
     hist_f(ax[0], hedges * 1e-3, freq.sum(axis = 0), color = cmap(0), **kwargs)
     hist_f(ax[1], dedges, freq.sum(axis = 1), color = cmap(0), **kwargs)
@@ -95,6 +96,14 @@ def plotCloudHist_f(dedges, hedges, freq,
 #  Plot fit distributions
 # =============================================================================
 
+def getDisplayName(theta):
+    if 'long_name' in theta.attrs.keys():
+        ylabel = theta.attrs['long_name']
+    else:
+        ylabel = theta.name
+    return ylabel
+        
+
 def plotCTHBeta(ax, a, b, n = 50, label = 'Beta', color = 'forestgreen'):
     H = np.linspace(0, ml.h_max, n)
     H_norm = ml.CTHtoUnitInt(H)
@@ -128,10 +137,10 @@ def plotCTHBetaMix(ax, alpha1, beta1, alpha2, beta2, p, n = 50,
     if plotSubBeta:
         ax.plot(H * 1e-3, ml.pdf_b(H_norm, alpha1, beta1) / 15, '--',
                    color = 'sandybrown', 
-                   label = 'Beta_1')
+                   label = '$Beta_1$')
         ax.plot(H * 1e-3, ml.pdf_b(H_norm, alpha2, beta2) / 15, '-.',
                    color = 'sandybrown',
-                   label = 'Beta_2')
+                   label = '$Beta_2$')
         
     ax.plot(H * 1e-3, ml.pdf_bmix(H_norm, alpha1, beta1, alpha2, beta2, p) / 15, 
                color = maincolor,
@@ -197,7 +206,8 @@ def plotLocalParamCth(ax, theta,
                marker = '*',
                )
     ax.set_xlabel('CTH (km)')
-    ax.set_ylabel(theta.name)
+
+    ax.set_ylabel(getDisplayName(theta))
     if logscale:
         ax.set_yscale('log')
     ax.legend()
@@ -248,7 +258,7 @@ def plotLocalParamCod(ax, theta,
     if logscale:
         ax.set_yscale('log')
     ax.set_xlabel('log COD ($\cdot$)')
-    ax.set_ylabel(theta.name)
+    ax.set_ylabel(getDisplayName(theta))
     ax.legend()
     return ax
 
@@ -299,6 +309,7 @@ def plotLocalParam(theta,
                    cmapsv = cmc.oslo_r, 
                    cod_kwargs = {}, 
                    cth_kwargs = {}, 
+                   figsize = (20, 4),
                    **kwargs):
     """
     
@@ -321,7 +332,7 @@ def plotLocalParam(theta,
 
     """
 
-    fig, ax = plt.subplots(1,3, figsize = (20,4))
+    fig, ax = plt.subplots(1,3, figsize = figsize)
 
     plotLocalParamCth(ax[0], theta, logscale = logscale, cmap = cmapsv, **cth_kwargs)
     plotLocalParamCod(ax[1], theta, logscale = logscale, cmap = cmapsv, **cod_kwargs)
@@ -370,10 +381,11 @@ def plot_distribution_next_cloud(df,
                                  nbins = 50, 
                                  mixture = False,
                                  ML = True,
+                                 hist_kwargs = {}, 
                                  **kwargs):
     # histograms
     freq, dedges, hedges = np.histogram2d(df.d_t_next, df.h_t_next, bins = nbins, **kwargs)
-    fig, ax = plotCloudHist_f(dedges, hedges, freq, density = True)
+    fig, ax = plotCloudHist_f(dedges, hedges, freq, density = True, **hist_kwargs)
     
     if ML:
         param_norm = me.fitNormal(df.d_t_next)

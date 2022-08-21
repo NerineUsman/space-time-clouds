@@ -10,8 +10,11 @@ import pandas as pd
 import xarray as xr
 
 import sys, os
-sys.path.insert(0, '../lib')
+
 sys.path.insert(0, './space-time-clouds/lib')
+sys.path.insert(0, '../lib/')
+sys.path.insert(0, '../src')
+
 from scipy.stats import beta, bernoulli, norm
 
 
@@ -282,6 +285,20 @@ if __name__ == "__main__":
         input = dict([line.split() for line in f if (len(line) > 1) & (line[0] != '#')])
         
     loc_mod = input['loc_model1']
+    
+    loc_model = '../mod/model1/'
+    loc_mod_or = loc_model
+    loc_fig = '../fig/model1/'
+    
+    dh = 200
+    dd = .2
+    dH = 400 
+    dD = .4
+    N = 50
+    
+    prop = {'dH' : dH, 'dD' : dD, 'N' : N }
+    prop = '_'.join([f'{x}={prop[x]}' for x in prop]).replace('.' ,'_')
+    loc_mod = loc_model + prop
 
     
     T = int(input['T'])
@@ -291,7 +308,7 @@ if __name__ == "__main__":
 
 
     ds_c = xr.open_dataset(loc_mod + 'expl_local_param.nc')
-    ds_cs = xr.open_dataset(loc_mod + 'glob_theta.nc')[['theta1', 'theta3']]
+    ds_cs = xr.open_dataset(loc_mod_or + 'glob_theta.nc')[['theta1', 'theta3']]
     
     
     
@@ -320,7 +337,9 @@ if __name__ == "__main__":
     
     x = x.where(x.area == 1)
     
-    x.to_netcdf(loc_sim_data + f'sim_n={x.dims["t"]}_{x.dims["i"]}x{x.dims["j"]}')
+    loc_sim = loc_sim_data + f'sim_n={x.dims["t"]}_{x.dims["i"]}x{x.dims["j"]}'
+    x.to_netcdf(loc_sim)
+    print('saved at \n', loc_sim)
     
     
     
